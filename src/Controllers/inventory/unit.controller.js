@@ -39,4 +39,33 @@ const get_unfiltered_units = asyncHandler(async (req, res) => {
   }
 });
 
-export { create_unit, get_unfiltered_units };
+const update_unit = asyncHandler(async (req, res) => {
+  try {
+    let { unit_id } = req.query;
+    let { unit_name } = req.body;
+    if (![unit_id, unit_name].every(Boolean))
+      throw new ApiError(400, "All parameters are required !!!");
+    const response = await query(
+      `UPDATE units SET unit_name = ? WHERE unit_id = ?`,
+      [unit_name, unit_id]
+    );
+    if (response.affectedRows === 0) throw new ApiError(404, "No data updated");
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { data: response },
+          "data Updated Successfully !!!"
+        )
+      );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.error(error);
+    throw new ApiError(400, "internal server error", [error]);
+  }
+});
+
+export { create_unit, get_unfiltered_units, update_unit };
