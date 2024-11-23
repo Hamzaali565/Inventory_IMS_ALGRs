@@ -23,4 +23,20 @@ const create_unit = asyncHandler(async (req, res) => {
   }
 });
 
-export { create_unit };
+const get_unfiltered_units = asyncHandler(async (req, res) => {
+  try {
+    const response = await query(`SELECT * FROM units`);
+    if (response.length === 0) throw new ApiError(404, "No data found");
+    res
+      .status(200)
+      .json(new ApiResponse(200, { data: response }, "Successfully retrieved"));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.error(error);
+    throw new ApiError(400, "internal server error", [error]);
+  }
+});
+
+export { create_unit, get_unfiltered_units };
