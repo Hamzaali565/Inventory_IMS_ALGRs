@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { createItem } from "../../../Controllers/inventory/item.controller.js";
+import {
+  createItem,
+  retrieved_item,
+  update_item,
+} from "../../../Controllers/inventory/item.controller.js";
 import {
   create_unit,
   get_unfiltered_units,
@@ -14,6 +18,8 @@ import {
 const router = Router();
 //items
 router.route("/item").post(createItem);
+router.route("/item").get(retrieved_item);
+router.route("/item").put(update_item);
 
 //units
 router.route("/unit").post(create_unit);
