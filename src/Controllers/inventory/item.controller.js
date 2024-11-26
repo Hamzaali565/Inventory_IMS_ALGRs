@@ -17,7 +17,16 @@ const createItem = asyncHandler(async (req, res, next) => {
     } = req.body;
 
     if (
-      ![item_name, unit_id, item_unit, p_price, s_price, c_user].every(Boolean)
+      ![
+        item_name,
+        unit_id,
+        item_unit,
+        p_price,
+        s_price,
+        c_user,
+        category,
+        category_id,
+      ].every(Boolean)
     )
       throw new ApiError(400, "All parameters are required !!!");
 
@@ -72,8 +81,11 @@ const update_item = asyncHandler(async (req, res) => {
       category,
       category_id,
     } = req.body;
+    console.log(req.body);
+
     if (
       ![
+        item_id,
         item_name,
         unit_id,
         item_unit,
@@ -90,10 +102,11 @@ const update_item = asyncHandler(async (req, res) => {
     if (check_item.length === 0) throw new ApiError(404, "Item not found");
     const response = await query(
       `
-      UPDATE items SET 
-      items_name = ?, unit_id = ?, item_unit = ?, p_price = ?, s_price = ?, category = ?, category_id = ?, u_user
-      WHERE item_id = ?`[
-        (item_name,
+      UPDATE items 
+      SET item_name = ?, unit_id = ?, item_unit = ?, p_price = ?, s_price = ?, category = ?, category_id = ?, u_user = ?
+      WHERE item_id = ?`,
+      [
+        item_name,
         unit_id,
         item_unit,
         p_price,
@@ -101,7 +114,7 @@ const update_item = asyncHandler(async (req, res) => {
         category,
         category_id,
         "hamza",
-        item_id)
+        item_id,
       ]
     );
     if (response.affectedRows === 0) throw new ApiError(404, "No data updated");
@@ -110,6 +123,8 @@ const update_item = asyncHandler(async (req, res) => {
     if (error instanceof ApiError) {
       throw error;
     }
+    console.log(error);
+
     throw new ApiError(400, "Internal server error !!!");
   }
 });
