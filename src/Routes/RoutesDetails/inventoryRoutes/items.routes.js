@@ -19,6 +19,7 @@ import {
   retrieved_location,
   update_location,
 } from "../../../Controllers/inventory/location.controller.js";
+import { stock_upload } from "../../../Controllers/inventory/StockTaking.controller.js";
 
 const router = Router();
 //items
@@ -41,4 +42,6 @@ router.route("/location").post(create_location);
 router.route("/location").get(retrieved_location);
 router.route("/location").put(update_location);
 
+// stock
+router.route("/stock").post(stock_upload);
 export default router;
