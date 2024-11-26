@@ -10,7 +10,7 @@ const create_supplier = asyncHandler(async (req, res) => {
       throw new ApiError(400, "All parameters are required !!!");
     const response = await query(
       `INSERT INTO suppliers (name, email, phone, status) VALUES ('${name}', '${email}', '${phone}', '${
-        status === true ? 1 : 0
+        status || 0
       }')`
     );
     res
@@ -65,11 +65,7 @@ const update_supplier = asyncHandler(async (req, res) => {
         name || supplier_check[0].name,
         email || supplier_check[0].email,
         phone || supplier_check[0].phone,
-        status !== undefined && status !== null
-          ? status === true
-            ? 1
-            : 0
-          : supplier_check[0].status,
+        status || false,
         id,
       ]
     );
