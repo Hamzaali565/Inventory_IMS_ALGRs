@@ -14,6 +14,11 @@ import {
   retrieved_category,
   update_category,
 } from "../../../Controllers/inventory/category.controller.js";
+import {
+  create_location,
+  retrieved_location,
+  update_location,
+} from "../../../Controllers/inventory/location.controller.js";
 
 const router = Router();
 //items
@@ -30,4 +35,10 @@ router.route("/unit").put(update_unit);
 router.route("/category").post(create_category);
 router.route("/category").get(retrieved_category);
 router.route("/category").put(update_category);
+
+// location
+router.route("/location").post(create_location);
+router.route("/location").get(retrieved_location);
+router.route("/location").put(update_location);
+
 export default router;
