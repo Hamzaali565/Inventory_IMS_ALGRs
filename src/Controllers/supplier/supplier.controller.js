@@ -9,9 +9,9 @@ const create_supplier = asyncHandler(async (req, res) => {
     if (![name, phone].every(Boolean))
       throw new ApiError(400, "All parameters are required !!!");
     const response = await query(
-      `INSERT INTO suppliers (name, email, phone, status) VALUES ("${name}", '${email}', "${phone}", "${
-        status || true
-      }")`
+      `INSERT INTO suppliers (name, email, phone, status) VALUES ('${name}', '${email}', '${phone}', '${
+        status === true ? 1 : 0
+      }')`
     );
     res
       .status(200)
@@ -50,6 +50,8 @@ const retrieved_supplier = asyncHandler(async (req, res) => {
 const update_supplier = asyncHandler(async (req, res) => {
   try {
     const { id, name, email, phone, status } = req.body;
+    console.log(req.body);
+
     if (!id)
       throw new ApiError(400, "Id is required to proceed this query !!!");
     const supplier_check = await query(`SELECT * FROM suppliers WHERE id = ?`, [
@@ -63,7 +65,11 @@ const update_supplier = asyncHandler(async (req, res) => {
         name || supplier_check[0].name,
         email || supplier_check[0].email,
         phone || supplier_check[0].phone,
-        status || supplier_check[0].status,
+        status !== undefined && status !== null
+          ? status === true
+            ? 1
+            : 0
+          : supplier_check[0].status,
         id,
       ]
     );
