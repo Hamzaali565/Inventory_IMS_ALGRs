@@ -44,4 +44,5 @@ router.route("/location").put(update_location);
 
 // stock
 router.route("/stock").post(stock_upload);
+
 export default router;
