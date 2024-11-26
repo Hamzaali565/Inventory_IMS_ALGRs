@@ -36,9 +36,6 @@ const stock_upload = asyncHandler(async (req, res) => {
         throw new ApiError(400, `Some Data missing at line no ${index + 1}`);
     });
 
-    // let placeholder = data.map(() => "(? ? ? ? ? ? ? ?)").join(", ");
-    // console.log("placeholder", placeholder);
-
     const values = data.flatMap((items) => [
       items.item_name,
       items.item_id,
@@ -49,7 +46,6 @@ const stock_upload = asyncHandler(async (req, res) => {
       items.location,
       items.location_id,
     ]);
-    console.log("values", values);
 
     const placeholders = Array(data.length)
       .fill("(?, ?, ?, ?, ?, ?, ?, ?)")
