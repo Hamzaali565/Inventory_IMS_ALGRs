@@ -143,4 +143,131 @@ const retrieved_detail = asyncHandler(async (req, res, next) => {
   }
 });
 
-export { create_po, retrieved_summary, retrieved_detail };
+const update_po = asyncHandler(async (req, res, next) => {
+  try {
+    const {
+      po_no,
+      po_date,
+      supplier_name,
+      supplier_id,
+      data,
+      location,
+      location_id,
+    } = req.body;
+    if (
+      ![
+        po_no,
+        po_date,
+        supplier_name,
+        supplier_id,
+        data,
+        location,
+        location_id,
+      ].every(Boolean)
+    )
+      throw new ApiError(400, "All parameters are required !!!");
+    if (!data || !Array.isArray(data) || !Array(data.length === 0))
+      throw new ApiError(
+        400,
+        "Data is required field, it should be array and it should not be empty !!!"
+      );
+
+    data.map((item, index) => {
+      const { item_id, item_name, qty, charges, amount } = item;
+      if (![item_id, item_name, qty, charges, amount].every(Boolean))
+        throw new ApiError(400, `some data missing at line ${index + 1}`);
+    });
+
+    const check_transaction = await query(
+      `SELECT grn_transaction FROM po_master WHERE po_no = ?`,
+      [po_no]
+    );
+    if (check_transaction[0].grn_transaction === 1)
+      throw new ApiError(
+        400,
+        "GRN transaction is proceed on this purchase order, unable to update.!!!"
+      );
+
+    const deletedrows = await query(`DELETE FROM po_child WHERE po_no = ?`, [
+      po_no,
+    ]);
+    console.log(deletedrows);
+    if (deletedrows.affectedRows === 0)
+      throw new ApiError(
+        400,
+        "Unable to delete previous Data, please try later"
+      );
+
+    const update_po_master = new Promise(async (resolve, reject) => {
+      try {
+        await query(
+          `
+            UPDATE po_master
+            set po_date = ?, supplier_name = ?, supplier_id = ?, location = ?, location_id = ?, u_user = ?
+            WHERE po_no = ?
+            `,
+          [
+            po_date,
+            supplier_name,
+            supplier_id,
+            location,
+            location_id,
+            "Hamza",
+            po_no,
+          ]
+        );
+
+        resolve("PO Master updated");
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    const update_po_child = new Promise(async (resolve, reject) => {
+      try {
+        let formattedData = data.map((items) => ({
+          ...items,
+          po_no,
+        }));
+        formattedData = formattedData.flatMap((items) => [
+          items.po_no,
+          items.item_name,
+          items.item_id,
+          items.qty,
+          items.charges,
+          items.amount,
+        ]);
+
+        const placeholders = Array(data.length)
+          .fill("(?, ?, ?, ?, ?, ?)")
+          .join(", ");
+
+        await query(
+          `INSERT INTO po_child (po_no, item_name, item_id, qty, charges, amount) VALUES ${placeholders}`,
+          formattedData
+        );
+        resolve("PO_ child Updated !!!");
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    Promise.all([update_po_master, update_po_child])
+      .then(() => {
+        res
+          .status(200)
+          .json(new ApiResponse(200, "PO Updated Successfully !!!"));
+      })
+      .catch((error) => {
+        next(new ApiError(400, error));
+      });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log(error);
+    throw new ApiError(400, "Internal server error !!!");
+  }
+});
+
+export { create_po, retrieved_summary, retrieved_detail, update_po };
