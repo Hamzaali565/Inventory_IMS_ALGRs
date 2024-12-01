@@ -1,4 +1,5 @@
 import { category_model } from "../Model/category.model.js";
+import { GRN_modal, master_GRN_modal } from "../Model/grn.model.js";
 import { createItem } from "../Model/item.model.js";
 import { location_modal } from "../Model/location.model.js";
 import { child_PO_modal, master_PO_modal } from "../Model/pur_order.modal.js";
@@ -17,6 +18,8 @@ const tablesSetup = async () => {
     await query(supplier_model);
     await query(master_PO_modal);
     await query(child_PO_modal);
+    await query(GRN_modal);
+    await query(master_GRN_modal);
     console.log("table created successfully !!!");
   } catch (error) {
     console.log(`Table creration failed with ${error}`);

@@ -20,6 +20,7 @@ import {
   update_location,
 } from "../../../Controllers/inventory/location.controller.js";
 import { stock_upload } from "../../../Controllers/inventory/StockTaking.controller.js";
+import { create_grn } from "../../../Controllers/inventory/grn.controller.js";
 
 const router = Router();
 //items
@@ -44,5 +45,8 @@ router.route("/location").put(update_location);
 
 // stock
 router.route("/stock").post(stock_upload);
+
+// grn
+router.route("/grn").post(create_grn);
 
 export default router;
