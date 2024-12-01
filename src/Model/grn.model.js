@@ -17,7 +17,8 @@ location_id INT NOT NULL
 
 const GRN_modal = `
 CREATE TABLE IF NOT EXISTS grn (
-grn_no VARCHAR(300) NOT NULL,
+id INT AUTO_INCREMENT PRIMARY KEY,
+grn_no INT NOT NULL,
 item_id INT NOT NULL,
 item_name VARCHAR(300) NOT NULL,
 unit_id INT NOT NULL,
@@ -29,7 +30,7 @@ charges DECIMAL(30, 2) NOT NULL,
 amount DECIMAL(30, 2) NOT NULL,
 p_size_status BOOLEAN DEFAULT FALSE,
 p_size_qty DECIMAL(30, 2),
-po_no VARCHAR(300) NOT NULL,
+po_no INT NOT NULL,
 grn_completed BOOLEAN DEFAULT FALSE,
 batch_no VARCHAR(300) NOT NULL
 ) 

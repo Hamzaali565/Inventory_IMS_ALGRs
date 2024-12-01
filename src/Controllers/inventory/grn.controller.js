@@ -17,19 +17,24 @@ const create_grn = asyncHandler(async (req, res, next) => {
       location_id,
       data,
     } = req.body;
-    if (!po_no || grn_date)
+    // console.log(req.body);
+
+    if (!po_no || !grn_date)
       throw new ApiError(400, "All parameters are required !!!");
     const find_last_entery = await query(
       `SELECT * from grn WHERE po_no = ? ORDER BY grn_no DESC`,
       [po_no]
     );
-    console.log(find_last_entery);
+    // console.log(find_last_entery);
     if (find_last_entery.length === 0) {
       if (!data || !Array.isArray(data) || data.length === 0)
         throw new ApiError(
           400,
           "Data is a required field, data should be array, data should contain atleast one object !!!"
         );
+
+      console.log(data);
+
       data.map((items, index) => {
         const {
           item_id,
@@ -38,7 +43,6 @@ const create_grn = asyncHandler(async (req, res, next) => {
           item_unit,
           t_qty,
           r_qty,
-          p_qty,
           charges,
           amount,
           p_size_status,
@@ -57,45 +61,42 @@ const create_grn = asyncHandler(async (req, res, next) => {
             item_unit,
             t_qty,
             r_qty,
-            p_qty,
             charges,
             amount,
-            p_size_status,
-            p_size_qty,
             po_no,
             batch_no,
             batch_qty,
-            p_size_stock,
           ].every(Boolean)
         )
           throw new ApiError(400, `Sone data miss at line no ${index + 1}`);
       });
       let master_grn = await query(
-        `INSERT INTO grn_master(grn_date, bill_no, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO grn_master(grn_date, bill_no, remarks, c_user, location, location_id, supplier_name, supplier_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           grn_date,
           bill_no,
           remarks,
           "Hamza",
           location,
+          location_id,
           supplier_name,
           supplier_id,
-          location_id,
         ]
       );
+      let grn_no = master_grn.insertId;
 
-      let grn_no = master_grn[0]?.grn_no;
-
-      data = data.map((items) => ({
+      let dataRes = data.map((items) => ({
         ...items,
         grn_no,
-        location: items?.location,
-        location_id: items?.location_id,
+        location,
+        location_id,
       }));
 
-      console.log("formatted Data", data);
+      console.log("formatted Data", dataRes);
 
-      const values = data.flatMap((items) => [
+      const values = dataRes.flatMap((items) => [
+        items?.grn_no,
         items?.item_id,
         items?.item_name,
         items?.unit_id,
@@ -110,14 +111,14 @@ const create_grn = asyncHandler(async (req, res, next) => {
         items?.po_no,
         items?.batch_no,
       ]);
-      const placeholders = Array(data.length)
-        .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      const placeholders = Array(dataRes.length)
+        .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
         .join(", ");
 
       const grn_child = new Promise(async (resolve, reject) => {
         try {
           await query(
-            `INSERT INTO grn (item_id, item_name, unit_id, item_unit, t_qty,
+            `INSERT INTO grn (grn_no, item_id, item_name, unit_id, item_unit, t_qty,
         r_qty, p_qty, charges, amount, p_size_status, p_size_qty, po_no, batch_no) 
         VALUES ${placeholders}`,
             values
@@ -128,7 +129,9 @@ const create_grn = asyncHandler(async (req, res, next) => {
         }
       });
 
-      let check_all_qty = data?.every((items) => items?.t_qty === items?.r_qty);
+      let check_all_qty = dataRes?.every(
+        (items) => items?.t_qty === items?.r_qty
+      );
 
       const update_grn_completed = new Promise(async (resolve, reject) => {
         if (check_all_qty === true) {
@@ -142,31 +145,34 @@ const create_grn = asyncHandler(async (req, res, next) => {
         }
         try {
         } catch (error) {
-          reject("Update grn_completed failed");
+          reject("Update grn_completed failed", error);
         }
       });
 
       const update_po_completed = new Promise(async (resolve, reject) => {
         if (check_all_qty === true) {
+          console.log(" update po_completed");
           await query(
-            `SET po_master UPDATE po_completed = ?, grn_transaction = ? where po_no = ?`,
+            `SET po_master UPDATE po_completed = ?, grn_transaction = ? WHERE po_no = ?`,
             [true, true, po_no]
           );
           resolve("po Completed");
         } else if (check_all_qty === false) {
-          await query(`UPDATE po_master SET grn_transaction = ? WHERE po_no`, [
-            true,
-            po_no,
-          ]);
+          console.log("i was here");
+
+          await query(
+            `UPDATE po_master SET grn_transaction = ? WHERE po_no = ?`,
+            [true, po_no]
+          );
           resolve("Grn Tansaction set to true !!!");
         }
         try {
         } catch (error) {
-          reject("Update po_completed failed");
+          reject("Update po_completed failed", error);
         }
       });
 
-      const stock_values = data.flatMap((items) => [
+      const stock_values = dataRes.flatMap((items) => [
         items.item_name,
         items.item_id,
         items.batch_qty,
@@ -183,7 +189,7 @@ const create_grn = asyncHandler(async (req, res, next) => {
         grn_no,
       ]);
 
-      const stock_placeholder = Array(data.length)
+      const stock_placeholder = Array(dataRes.length)
         .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
         .join(", ");
 
@@ -198,7 +204,7 @@ const create_grn = asyncHandler(async (req, res, next) => {
           );
           resolve("Stock added successfully !!!");
         } catch (error) {
-          reject("Insert stock failed");
+          reject("Insert stock failed", error);
         }
       });
 
