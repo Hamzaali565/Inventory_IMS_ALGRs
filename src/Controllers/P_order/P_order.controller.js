@@ -5,17 +5,8 @@ import { query } from "../../Database/database.config.js";
 
 const create_po = asyncHandler(async (req, res) => {
   try {
-    const {
-      po_date,
-      supplier_name,
-      supplier_id,
-      data,
-      location,
-      location_id,
-      p_size_status,
-      p_size_qty,
-    } = req.body;
-    console.log(req.body);
+    const { po_date, supplier_name, supplier_id, data, location, location_id } =
+      req.body;
     if (
       ![po_date, supplier_name, supplier_id, data, location, location_id].every(
         Boolean
@@ -39,8 +30,6 @@ const create_po = asyncHandler(async (req, res) => {
       [po_date, supplier_name, supplier_id, "Hamza", location, location_id]
     );
 
-    console.log("createMaster", createMaster);
-
     const insertedData = await query(
       `SELECT * FROM po_master WHERE po_no = ?`,
       [createMaster?.insertId]
@@ -50,7 +39,6 @@ const create_po = asyncHandler(async (req, res) => {
       ...items,
       po_no: insertedData[0]?.po_no,
     }));
-    console.log("fomattedData", fomattedData);
 
     const values = fomattedData.flatMap((items) => [
       items?.po_no,
@@ -61,14 +49,16 @@ const create_po = asyncHandler(async (req, res) => {
       items?.amount,
       items?.p_size_status,
       items?.p_size_qty,
+      items?.item_unit,
+      items?.unit_id,
     ]);
 
     const placeholders = Array(data.length)
-      .fill("(?, ?, ?, ?, ?, ?, ?, ?)")
+      .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
       .join(", ");
 
     const create_child_po = await query(
-      `INSERT INTO po_child (po_no, item_name, item_id, qty, charges, amount, p_size_status, p_size_qty) VALUES ${placeholders}`,
+      `INSERT INTO po_child (po_no, item_name, item_id, qty, charges, amount, p_size_status, p_size_qty, item_unit, unit_id) VALUES ${placeholders}`,
       values
     );
     res.status(200).json(new ApiResponse(200, "PO created successfully !!!"));
@@ -246,14 +236,18 @@ const update_po = asyncHandler(async (req, res, next) => {
           items.qty,
           items.charges,
           items.amount,
+          items?.p_size_status,
+          items?.p_size_qty,
+          items?.item_unit,
+          items?.unit_id,
         ]);
 
         const placeholders = Array(data.length)
-          .fill("(?, ?, ?, ?, ?, ?)")
+          .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
           .join(", ");
 
         await query(
-          `INSERT INTO po_child (po_no, item_name, item_id, qty, charges, amount) VALUES ${placeholders}`,
+          `INSERT INTO po_child (po_no, item_name, item_id, qty, charges, amount, p_size_status, p_size_qty, item_unit, unit_id) VALUES ${placeholders}`,
           formattedData
         );
         resolve("PO_ child Updated !!!");

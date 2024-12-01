@@ -19,6 +19,8 @@ const child_PO_modal = `
 CREATE TABLE IF NOT EXISTS po_child (
 item_id INT NOT NULL,
 item_name VARCHAR(300) NOT NULL,
+unit_id INT NOT NULL,
+item_unit VARCHAR(300) NOT NULL,
 po_no INT NOT NULL,
 grn_status BOOLEAN DEFAULT FALSE,
 qty DECIMAL(30, 2) NOT NULL,
