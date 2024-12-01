@@ -7,6 +7,8 @@ const stock_upload = asyncHandler(async (req, res) => {
   let connection;
   try {
     const { data } = req.body;
+    console.log(data);
+
     if (!data || !Array.isArray(data) || data.length === 0)
       throw new ApiError(
         400,
@@ -45,14 +47,18 @@ const stock_upload = asyncHandler(async (req, res) => {
       "hamza",
       items.location,
       items.location_id,
+      items.p_size_status,
+      items.p_size_qty,
+      items.p_size_stock,
     ]);
 
     const placeholders = Array(data.length)
-      .fill("(?, ?, ?, ?, ?, ?, ?, ?)")
+      .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
       .join(", ");
 
     const response = await query(
-      `INSERT INTO stock (item_name, item_id, batch_qty, batch_no, input_type, c_user, location, location_id) VALUES ${placeholders}`,
+      `INSERT INTO stock (item_name, item_id, batch_qty, batch_no, input_type, c_user, location, location_id, p_size_status, p_size_qty, p_size_stock) 
+       VALUES ${placeholders}`,
       values
     );
 

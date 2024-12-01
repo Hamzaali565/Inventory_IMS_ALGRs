@@ -14,6 +14,11 @@ const createItem = asyncHandler(async (req, res, next) => {
       c_user,
       category,
       category_id,
+      p_size_status,
+      p_size_qty,
+      p_price_per_size,
+      s_price_per_size,
+      scan_code,
     } = req.body;
 
     if (
@@ -26,14 +31,39 @@ const createItem = asyncHandler(async (req, res, next) => {
         c_user,
         category,
         category_id,
+        scan_code,
       ].every(Boolean)
     )
       throw new ApiError(400, "All parameters are required !!!");
 
-    const response =
-      await query(`INSERT INTO items ( item_name, unit_id, item_unit, p_price, s_price, c_user, category, category_id)
-                   VALUES ('${item_name}', '${unit_id}', '${item_unit}', '${p_price}', '${s_price}', '${c_user}', '${category}', '${category_id}')       
-        `);
+    // const createMaster = await query(
+    //   `INSERT INTO po_master (po_date, supplier_name, supplier_id, c_user, location, location_id)
+    //      VALUES (?, ?, ?, ?, ?, ?)`,
+    //   [po_date, supplier_name, supplier_id, "Hamza", location, location_id]
+    // );
+
+    const response = await query(
+      `
+      INSERT INTO items (item_name, unit_id, item_unit, p_price, s_price, c_user, category,
+                   category_id, p_size_status, p_size_qty, p_price_per_size, s_price_per_size, scan_code)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        item_name,
+        unit_id,
+        item_unit,
+        p_price,
+        s_price,
+        c_user,
+        category,
+        category_id,
+        p_size_status,
+        p_size_qty,
+        p_price_per_size,
+        s_price_per_size,
+        scan_code,
+      ]
+    );
+
     res
       .status(201)
       .json(
@@ -80,6 +110,11 @@ const update_item = asyncHandler(async (req, res) => {
       s_price,
       category,
       category_id,
+      p_size_status,
+      p_size_qty,
+      p_price_per_size,
+      s_price_per_size,
+      scan_code,
     } = req.body;
     console.log(req.body);
 
@@ -93,6 +128,7 @@ const update_item = asyncHandler(async (req, res) => {
         s_price,
         category,
         category_id,
+        scan_code,
       ].every(Boolean)
     )
       throw new ApiError(400, "All Parameters are required !!!");
@@ -103,7 +139,9 @@ const update_item = asyncHandler(async (req, res) => {
     const response = await query(
       `
       UPDATE items 
-      SET item_name = ?, unit_id = ?, item_unit = ?, p_price = ?, s_price = ?, category = ?, category_id = ?, u_user = ?
+      SET item_name = ?, unit_id = ?, item_unit = ?, p_price = ?, s_price = ?, 
+      category = ?, category_id = ?, u_user = ?,  p_size_status = ?, p_size_qty = ?,
+      p_price_per_size = ?, s_price_per_size = ?, scan_code = ?
       WHERE item_id = ?`,
       [
         item_name,
@@ -114,6 +152,11 @@ const update_item = asyncHandler(async (req, res) => {
         category,
         category_id,
         "hamza",
+        p_size_status,
+        p_size_qty,
+        p_price_per_size,
+        s_price_per_size,
+        scan_code,
         item_id,
       ]
     );
