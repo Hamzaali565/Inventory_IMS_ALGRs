@@ -274,4 +274,50 @@ const update_po = asyncHandler(async (req, res, next) => {
   }
 });
 
-export { create_po, retrieved_summary, retrieved_detail, update_po };
+const sorted_po = asyncHandler(async (req, res) => {
+  const { po_no } = req.query;
+  if (!po_no) throw new ApiError(400, "po_no is required !!!");
+  const get_authentic_po = await query(
+    `SELECT * FROM po_master WHERE po_no = ? AND po_completed = ?`,
+    [po_no, false]
+  );
+  if (get_authentic_po.length === 0)
+    throw new ApiError(400, "All items are released !!!");
+  const grn_transaction_check = await query(
+    `SELECT * FROM grn WHERE po_no = ? ORDER BY grn_no DESC`,
+    [po_no]
+  );
+  if (grn_transaction_check.length === 0) {
+    const po_child = await query(`SELECT * FROM po_child WHERE po_no = ?`, [
+      po_no,
+    ]);
+    res.status(200).json(new ApiResponse(200, { data: po_child }));
+    return;
+  }
+});
+
+const po_to_grn = asyncHandler(async (req, res) => {
+  try {
+    const response = await query(
+      `SELECT po_no, supplier_name, c_date FROM po_master WHERE po_completed = ?`,
+      [false]
+    );
+    if (response.length === 0) throw new ApiError(404, "No data found !!!");
+    res.status(200).json(new ApiResponse(200, { data: response }));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log(error);
+    throw new ApiError(400, "Internal server error !!!");
+  }
+});
+
+export {
+  create_po,
+  retrieved_summary,
+  retrieved_detail,
+  update_po,
+  po_to_grn,
+  sorted_po,
+};

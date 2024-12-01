@@ -4,6 +4,7 @@ import { ApiError } from "../../Utils/ApiError.js";
 import { query } from "../../Database/database.config.js";
 
 const create_grn = asyncHandler(async (req, res, next) => {
+  let connection;
   try {
     const {
       grn_date,
@@ -19,7 +20,7 @@ const create_grn = asyncHandler(async (req, res, next) => {
     if (!po_no || grn_date)
       throw new ApiError(400, "All parameters are required !!!");
     const find_last_entery = await query(
-      `SELECT * from grn WHERE po_no = ? ORDER BY grn_no DESC LIMIT 1`,
+      `SELECT * from grn WHERE po_no = ? ORDER BY grn_no DESC`,
       [po_no]
     );
     console.log(find_last_entery);
@@ -207,7 +208,8 @@ const create_grn = asyncHandler(async (req, res, next) => {
         update_po_completed,
         update_stock,
       ])
-        .then(() => {
+        .then(async () => {
+          await query("COMMIT");
           res
             .status(200)
             .json(new ApiResponse(200, { data: "Data saved Successfully" }));
@@ -217,12 +219,16 @@ const create_grn = asyncHandler(async (req, res, next) => {
         });
     }
   } catch (error) {
+    if (connection) await query("ROLLBACK");
     if (error instanceof ApiError) {
       throw error;
     }
     console.log(error);
-
     throw new ApiError(400, "Internal server error !!!");
+  } finally {
+    if (connection) {
+      connection.release();
+    }
   }
 });
 
