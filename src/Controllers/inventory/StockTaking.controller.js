@@ -7,7 +7,6 @@ const stock_upload = asyncHandler(async (req, res) => {
   let connection;
   try {
     const { data } = req.body;
-    console.log(data);
 
     if (!data || !Array.isArray(data) || data.length === 0)
       throw new ApiError(

@@ -5,8 +5,16 @@ import { query } from "../../Database/database.config.js";
 
 const create_po = asyncHandler(async (req, res) => {
   try {
-    const { po_date, supplier_name, supplier_id, data, location, location_id } =
-      req.body;
+    const {
+      po_date,
+      supplier_name,
+      supplier_id,
+      data,
+      location,
+      location_id,
+      p_size_status,
+      p_size_qty,
+    } = req.body;
     console.log(req.body);
     if (
       ![po_date, supplier_name, supplier_id, data, location, location_id].every(
@@ -45,20 +53,22 @@ const create_po = asyncHandler(async (req, res) => {
     console.log("fomattedData", fomattedData);
 
     const values = fomattedData.flatMap((items) => [
-      items.po_no,
-      items.item_name,
-      items.item_id,
-      items.qty,
-      items.charges,
-      items.amount,
+      items?.po_no,
+      items?.item_name,
+      items?.item_id,
+      items?.qty,
+      items?.charges,
+      items?.amount,
+      items?.p_size_status,
+      items?.p_size_qty,
     ]);
 
     const placeholders = Array(data.length)
-      .fill("(?, ?, ?, ?, ?, ?)")
+      .fill("(?, ?, ?, ?, ?, ?, ?, ?)")
       .join(", ");
 
     const create_child_po = await query(
-      `INSERT INTO po_child (po_no, item_name, item_id, qty, charges, amount) VALUES ${placeholders}`,
+      `INSERT INTO po_child (po_no, item_name, item_id, qty, charges, amount, p_size_status, p_size_qty) VALUES ${placeholders}`,
       values
     );
     res.status(200).json(new ApiResponse(200, "PO created successfully !!!"));
