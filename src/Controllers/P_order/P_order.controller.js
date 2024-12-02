@@ -278,18 +278,22 @@ const sorted_po = asyncHandler(async (req, res) => {
   try {
     const { po_no } = req.query;
     if (!po_no) throw new ApiError(400, "po_no is required !!!");
+    console.log("po_no", po_no);
+
     const get_authentic_po = await query(
       `SELECT * FROM po_master WHERE po_no = ? AND po_completed = ?`,
       [po_no, false]
     );
+    console.log("get_authentic_po", get_authentic_po);
 
     if (get_authentic_po.length === 0)
       throw new ApiError(400, "All items are released !!!");
-    const grn_transaction_check = await query(
-      `SELECT * FROM grn WHERE po_no = ? ORDER BY grn_no DESC`,
-      [po_no]
+    let grn_transaction_check = await query(
+      `SELECT * FROM grn 
+       WHERE po_no = ? 
+         AND grn_no = (SELECT MAX(grn_no) FROM grn WHERE po_no = ?)`,
+      [po_no, po_no]
     );
-    console.log("get_authentic_po", grn_transaction_check);
     if (grn_transaction_check.length === 0) {
       const po_child = await query(`SELECT * FROM po_child WHERE po_no = ?`, [
         po_no,
@@ -297,6 +301,21 @@ const sorted_po = asyncHandler(async (req, res) => {
       res.status(200).json(new ApiResponse(200, { data: po_child }));
       return;
     }
+
+    console.log("grn_transaction_checks before filter", grn_transaction_check);
+    grn_transaction_check = grn_transaction_check.filter(
+      (items) => !(items?.t_qty === items?.r_qty)
+    );
+    console.log("grn_transaction_checks", grn_transaction_check);
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { data: grn_transaction_check },
+          "grn_transaction_check"
+        )
+      );
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
