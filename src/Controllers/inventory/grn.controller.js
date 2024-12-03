@@ -171,48 +171,55 @@ const create_grn = asyncHandler(async (req, res, next) => {
       }
     });
 
-    let check_all_qty = dataRes?.every(
-      (items) => items?.t_qty === items?.r_qty
-    );
+    console.log("I am DataRes 😎", dataRes);
 
-    const update_grn_completed = new Promise(async (resolve, reject) => {
-      if (check_all_qty === true) {
-        await query(`SET grn UPDATE grn_completed = ? where po_no = ?`, [
-          true,
-          po_no,
-        ]);
-        resolve("Grn Completed");
-      } else if (check_all_qty === false) {
-        resolve("GRN is not completed yet !!!");
-      }
-      try {
-      } catch (error) {
-        reject("Update grn_completed failed", error);
-      }
-    });
+    // let check_all_qty = dataRes?.every(
+    //   (items) => items?.t_qty === items?.r_qty
+    // );
 
-    const update_po_completed = new Promise(async (resolve, reject) => {
-      if (check_all_qty === true) {
-        console.log(" update po_completed");
-        await query(
-          `SET po_master UPDATE po_completed = ?, grn_transaction = ? WHERE po_no = ?`,
-          [true, true, po_no]
-        );
-        resolve("po Completed");
-      } else if (check_all_qty === false) {
-        console.log("i was here");
+    // console.log("check complete is :", check_all_qty);
 
-        await query(
-          `UPDATE po_master SET grn_transaction = ? WHERE po_no = ?`,
-          [true, po_no]
-        );
-        resolve("Grn Tansaction set to true !!!");
-      }
-      try {
-      } catch (error) {
-        reject("Update po_completed failed", error);
-      }
-    });
+    // const update_grn_completed = new Promise(async (resolve, reject) => {
+    //   try {
+    //     if (check_all_qty === true) {
+    //       console.log("i am grn completed");
+
+    //       await query(`SET grn UPDATE grn_completed = ? where po_no = ?`, [
+    //         true,
+    //         po_no,
+    //       ]);
+    //       resolve("Grn Completed");
+    //     } else if (check_all_qty === false) {
+    //       resolve("GRN is not completed yet !!!");
+    //       console.log("i am not grn completed");
+    //     }
+    //   } catch (error) {
+    //     console.log("i am not rejected");
+    //     reject("Update grn_completed failed", error);
+    //   }
+    // });
+
+    // const update_po_completed = new Promise(async (resolve, reject) => {
+    //   if (check_all_qty === true) {
+    //     console.log(" update po_completed");
+    //     await query(
+    //       `SET po_master UPDATE po_completed = ?, grn_transaction = ? WHERE po_no = ?`,
+    //       [true, true, po_no]
+    //     );
+    //     resolve("po Completed");
+    //   } else if (check_all_qty === false) {
+    //     await query(
+    //       `UPDATE po_master SET grn_transaction = ? WHERE po_no = ?`,
+    //       [true, po_no]
+    //     );
+    //     console.log("i was here");
+    //     resolve("Grn Tansaction set to true !!!");
+    //   }
+    //   try {
+    //   } catch (error) {
+    //     reject("Update po_completed failed", error);
+    //   }
+    // });
 
     const stock_values = dataRes.flatMap((items) => [
       items.item_name,
@@ -250,17 +257,81 @@ const create_grn = asyncHandler(async (req, res, next) => {
       }
     });
 
-    Promise.all([
-      grn_child,
-      update_grn_completed,
-      update_po_completed,
-      update_stock,
-    ])
+    Promise.all([grn_child, update_stock])
       .then(async () => {
-        await query("COMMIT");
-        res
-          .status(200)
-          .json(new ApiResponse(200, { data: "Data saved Successfully" }));
+        try {
+          await query("COMMIT");
+          let find_last_grn = await query(
+            `SELECT * FROM grn 
+             WHERE po_no = ? 
+               AND grn_no = (SELECT MAX(grn_no) FROM grn WHERE po_no = ?)`,
+            [po_no, po_no]
+          );
+
+          let check_all_qty = find_last_grn?.every(
+            (items) => items?.p_qty === 0
+          );
+
+          console.log("check complete is :", check_all_qty);
+
+          const update_grn_completed = new Promise(async (resolve, reject) => {
+            try {
+              if (check_all_qty === true) {
+                await query(
+                  `UPDATE grn SET grn_completed = ? where po_no = ?`,
+                  [true, po_no]
+                );
+                resolve("Grn Completed");
+                console.log("i am grn completed");
+              } else if (check_all_qty === false) {
+                resolve("GRN is not completed yet !!!");
+                console.log("i am not grn completed");
+              }
+            } catch (error) {
+              console.log("i am rejected");
+              reject("Update grn_completed failed", error);
+            }
+          });
+          const update_po_completed = new Promise(async (resolve, reject) => {
+            if (check_all_qty === true) {
+              console.log(" update po_completed");
+              await query(
+                `UPDATE po_master SET po_completed = ?, grn_transaction = ? WHERE po_no = ?`,
+                [true, true, po_no]
+              );
+              resolve("po Completed");
+            } else if (check_all_qty === false) {
+              await query(
+                `UPDATE po_master SET grn_transaction = ? WHERE po_no = ?`,
+                [true, po_no]
+              );
+              console.log("i was here");
+              resolve("Grn Tansaction set to true !!!");
+            }
+            try {
+            } catch (error) {
+              console.log("rejected !!!");
+
+              reject("Update po_completed failed", error);
+            }
+          });
+
+          Promise.all([update_grn_completed, update_po_completed])
+            .then(() => {
+              console.log("update completed");
+              res
+                .status(200)
+                .json(
+                  new ApiResponse(200, { data: "Data saved Successfully" })
+                );
+            })
+            .catch((error) => {
+              console.log("update failed");
+              next(new ApiError(400, error));
+            });
+        } catch (error) {
+          throw new ApiError(400, "SOme thing went wrong !!!");
+        }
       })
       .catch((error) => {
         next(new ApiError(400, error));

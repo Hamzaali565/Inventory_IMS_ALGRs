@@ -280,14 +280,21 @@ const sorted_po = asyncHandler(async (req, res) => {
     if (!po_no) throw new ApiError(400, "po_no is required !!!");
     console.log("po_no", po_no);
 
-    const get_authentic_po = await query(
-      `SELECT * FROM po_master WHERE po_no = ? AND po_completed = ?`,
-      [po_no, false]
+    let get_authentic_po = await query(
+      `SELECT * FROM po_master WHERE po_no = ? AND po_completed = ? AND grn_transaction = ?`,
+      [po_no, false, false]
     );
-    console.log("get_authentic_po", get_authentic_po);
+    console.log("get_authentic_po_master", get_authentic_po);
 
-    if (get_authentic_po.length === 0)
-      throw new ApiError(400, "All items are released !!!");
+    if (get_authentic_po.length !== 0) {
+      get_authentic_po = await query(`SELECT * FROM po_child WHERE po_no = ?`, [
+        po_no,
+      ]);
+      console.log("get_authentic_po", get_authentic_po);
+      res.status(200).json(new ApiResponse(200, { data: get_authentic_po }));
+      return;
+    }
+
     let grn_transaction_check = await query(
       `SELECT * FROM grn 
        WHERE po_no = ? 
