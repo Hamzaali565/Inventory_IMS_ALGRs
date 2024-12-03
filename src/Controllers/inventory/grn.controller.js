@@ -324,7 +324,7 @@ const create_grn = asyncHandler(async (req, res, next) => {
         next(new ApiError(400, error));
       });
   } catch (error) {
-    if (connection) await query("ROLLBACK");
+    await query("ROLLBACK");
     if (error instanceof ApiError) {
       throw error;
     }
