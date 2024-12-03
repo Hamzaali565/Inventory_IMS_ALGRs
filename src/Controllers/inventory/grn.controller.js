@@ -272,8 +272,6 @@ const create_grn = asyncHandler(async (req, res, next) => {
             (items) => items?.p_qty === 0
           );
 
-          console.log("check complete is :", check_all_qty);
-
           const update_grn_completed = new Promise(async (resolve, reject) => {
             try {
               if (check_all_qty === true) {
