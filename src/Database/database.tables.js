@@ -4,7 +4,10 @@ import { createItem } from "../Model/item.model.js";
 import { location_modal } from "../Model/location.model.js";
 import { child_PO_modal, master_PO_modal } from "../Model/pur_order.modal.js";
 import { stock_taking_model } from "../Model/stockTaking.model.js";
-import { supplier_model } from "../Model/supplier.model.js";
+import {
+  supplier_ledger_model,
+  supplier_model,
+} from "../Model/supplier.model.js";
 import { unitTable } from "../Model/unit.model.js";
 import { query } from "./database.config.js";
 
@@ -20,6 +23,7 @@ const tablesSetup = async () => {
     await query(child_PO_modal);
     await query(GRN_modal);
     await query(master_GRN_modal);
+    await query(supplier_ledger_model);
     console.log("table created successfully !!!");
   } catch (error) {
     console.log(`Table creration failed with ${error}`);

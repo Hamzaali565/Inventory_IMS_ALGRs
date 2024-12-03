@@ -257,81 +257,70 @@ const create_grn = asyncHandler(async (req, res, next) => {
       }
     });
 
-    Promise.all([grn_child, update_stock])
-      .then(async () => {
-        try {
-          await query("COMMIT");
-          let find_last_grn = await query(
-            `SELECT * FROM grn 
-             WHERE po_no = ? 
-               AND grn_no = (SELECT MAX(grn_no) FROM grn WHERE po_no = ?)`,
-            [po_no, po_no]
-          );
+    Promise.all([grn_child, update_stock]);
 
-          let check_all_qty = find_last_grn?.every(
-            (items) => items?.p_qty === 0
-          );
+    const find_last_grn = await query(
+      `SELECT * FROM grn 
+       WHERE po_no = ? 
+         AND grn_no = (SELECT MAX(grn_no) FROM grn WHERE po_no = ?)`,
+      [po_no, po_no]
+    );
 
-          const update_grn_completed = new Promise(async (resolve, reject) => {
-            try {
-              if (check_all_qty === true) {
-                await query(
-                  `UPDATE grn SET grn_completed = ? where po_no = ?`,
-                  [true, po_no]
-                );
-                resolve("Grn Completed");
-                console.log("i am grn completed");
-              } else if (check_all_qty === false) {
-                resolve("GRN is not completed yet !!!");
-                console.log("i am not grn completed");
-              }
-            } catch (error) {
-              console.log("i am rejected");
-              reject("Update grn_completed failed", error);
-            }
-          });
-          const update_po_completed = new Promise(async (resolve, reject) => {
-            if (check_all_qty === true) {
-              console.log(" update po_completed");
-              await query(
-                `UPDATE po_master SET po_completed = ?, grn_transaction = ? WHERE po_no = ?`,
-                [true, true, po_no]
-              );
-              resolve("po Completed");
-            } else if (check_all_qty === false) {
-              await query(
-                `UPDATE po_master SET grn_transaction = ? WHERE po_no = ?`,
-                [true, po_no]
-              );
-              console.log("i was here");
-              resolve("Grn Tansaction set to true !!!");
-            }
-            try {
-            } catch (error) {
-              console.log("rejected !!!");
+    let check_all_qty = find_last_grn?.every((items) => items?.p_qty === 0);
 
-              reject("Update po_completed failed", error);
-            }
-          });
+    const updateGrnCompleted = async () => {
+      if (check_all_qty) {
+        await query(`UPDATE grn SET grn_completed = ? WHERE po_no = ?`, [
+          true,
+          po_no,
+        ]);
+        return "GRN Completed";
+      }
+      return "GRN not completed yet";
+    };
 
-          Promise.all([update_grn_completed, update_po_completed])
-            .then(() => {
-              console.log("update completed");
-              res
-                .status(200)
-                .json(
-                  new ApiResponse(200, { data: "Data saved Successfully" })
-                );
-            })
-            .catch((error) => {
-              console.log("update failed");
-              next(new ApiError(400, error));
-            });
-        } catch (error) {
-          throw new ApiError(400, "SOme thing went wrong !!!");
-        }
+    const updatePoCompleted = async () => {
+      if (check_all_qty) {
+        await query(
+          `UPDATE po_master SET po_completed = ?, grn_transaction = ? WHERE po_no = ?`,
+          [true, true, po_no]
+        );
+        return "PO Completed";
+      } else {
+        await query(
+          `UPDATE po_master SET grn_transaction = ? WHERE po_no = ?`,
+          [true, po_no]
+        );
+        return "GRN Transaction set to true";
+      }
+    };
+
+    const createSupplierLedger = async () => {
+      const payable = find_last_grn.reduce(
+        (sum, item) => sum + (item?.amount || 0),
+        0
+      );
+
+      await query(
+        `INSERT INTO supplier_ledger (grn_no, supplier_name, supplier_id, payable) VALUES (?, ?, ?, ?)`,
+        [grn_no, supplier_name, supplier_id, payable]
+      );
+      return "Supplier Ledger Created";
+    };
+
+    await Promise.all([
+      updateGrnCompleted(),
+      updatePoCompleted(),
+      createSupplierLedger(),
+    ])
+      .then(() => {
+        console.log("update completed");
+        res
+          .status(200)
+          .json(new ApiResponse(200, { data: "Data saved Successfully" }));
       })
       .catch((error) => {
+        console.log("update failed");
         next(new ApiError(400, error));
       });
   } catch (error) {
