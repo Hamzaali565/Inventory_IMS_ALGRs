@@ -305,13 +305,14 @@ const sorted_po = asyncHandler(async (req, res) => {
       const po_child = await query(`SELECT * FROM po_child WHERE po_no = ?`, [
         po_no,
       ]);
+
       res.status(200).json(new ApiResponse(200, { data: po_child }));
       return;
     }
 
     console.log("grn_transaction_checks before filter", grn_transaction_check);
     grn_transaction_check = grn_transaction_check.filter(
-      (items) => !(items?.t_qty === items?.r_qty)
+      (items) => items?.p_qty !== 0
     );
     console.log("grn_transaction_checks", grn_transaction_check);
     res

@@ -34,10 +34,23 @@ const create_grn = asyncHandler(async (req, res, next) => {
       );
       console.log("find_last_entery", find_last_entery);
 
+      // find_last_entery = data.map((items) => {
+      //   let newData = find_last_entery.filter(
+      //     (newItem) => newItem?.item_id === items?.item_id
+      //   );
+      //   return newData;
+      // });
+      // console.log("i found Data", data);
+      // console.log("i found last entry", find_last_entery);
+      // console.log(data.map((item) => item?.item_id));
+
       find_last_entery.forEach((items) => {
+        console.log("items", items);
+        // console.log("items", items?.ie);
         let find_current_pendings = data.find(
           (IRQ) => IRQ?.id === items?.id && IRQ?.r_qty > items?.p_qty
         );
+
         console.log("find_current_pendings", find_current_pendings);
 
         if (find_current_pendings)
@@ -302,8 +315,8 @@ const create_grn = asyncHandler(async (req, res, next) => {
       );
 
       await query(
-        `INSERT INTO supplier_ledger (grn_no, supplier_name, supplier_id, payable) VALUES (?, ?, ?, ?)`,
-        [grn_no, supplier_name, supplier_id, payable]
+        `INSERT INTO supplier_ledger (grn_no, supplier_name, supplier_id, payable, c_user) VALUES (?, ?, ?, ?, ?)`,
+        [grn_no, supplier_name, supplier_id, payable, "hamza"]
       );
       return "Supplier Ledger Created";
     };

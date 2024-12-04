@@ -16,7 +16,11 @@ supplier_name VARCHAR(300) NOT NULL,
 supplier_id INT NOT NULL,
 payable DECIMAL(30, 2),
 payed DECIMAL(30, 2) DEFAULT 0, 
-completed BOOLEAN DEFAULT FALSE
+completed BOOLEAN DEFAULT FALSE,
+c_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+c_user VARCHAR(300) NOT NULL,
+u_user VARCHAR(300),
+u_date TIMESTAMP DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 )
 `;
 export { supplier_model, supplier_ledger_model };
