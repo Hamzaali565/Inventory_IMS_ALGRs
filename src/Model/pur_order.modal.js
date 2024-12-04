@@ -27,7 +27,8 @@ qty DECIMAL(30, 2) NOT NULL,
 charges DECIMAL(30, 2) NOT NULL,
 amount DECIMAL(30, 2) NOT NULL,
 p_size_status BOOLEAN DEFAULT FALSE,
-p_size_qty DECIMAL(30, 2)
+p_size_qty DECIMAL(30, 2),
+release_qty DECIMAL(30, 2) DEFAULT 0
 ) 
 `;
 

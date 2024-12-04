@@ -29,9 +29,7 @@ const create_grn = asyncHandler(async (req, res, next) => {
     );
     let AuthenticData = [];
     if (find_last_entery.length !== 0) {
-      find_last_entery = find_last_entery.filter(
-        (items) => !(items?.t_qty === items?.r_qty)
-      );
+      find_last_entery = find_last_entery.filter((items) => items?.p_qty !== 0);
       console.log("find_last_entery", find_last_entery);
 
       // find_last_entery = data.map((items) => {
@@ -74,6 +72,26 @@ const create_grn = asyncHandler(async (req, res, next) => {
           );
         }
       });
+    }
+    if (find_last_entery.length !== 0) {
+      let find_remains_of_po = await query(
+        `SELECT * FROM po_child
+       WHERE po_no = ? AND release_qty = ? `,
+        [po_no, 0]
+      );
+      if (find_remains_of_po.length !== 0) {
+        find_remains_of_po.forEach((items) => {
+          let findData = data.find(
+            (DataObj) => DataObj?.item_id === items?.item_id
+          );
+          console.log("iiii founddddd", findData);
+
+          if (findData) {
+            findData.p_qty = findData?.p_qty - findData?.r_qty;
+            AuthenticData.push(findData);
+          }
+        });
+      }
     }
 
     if (find_last_entery.length !== 0) {
@@ -169,6 +187,8 @@ const create_grn = asyncHandler(async (req, res, next) => {
     const placeholders = Array(dataRes.length)
       .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
       .join(", ");
+
+    // get po_child of grn_status false an push in authentic_po
 
     const grn_child = new Promise(async (resolve, reject) => {
       try {
@@ -270,19 +290,42 @@ const create_grn = asyncHandler(async (req, res, next) => {
       }
     });
 
-    Promise.all([grn_child, update_stock]);
+    const update_grn_status = async () => {
+      try {
+        const promises = dataRes.map((items) =>
+          query(
+            `UPDATE po_child SET grn_status = ?, release_qty = release_qty + ? WHERE item_id = ? AND po_no = ?`,
+            [true, items?.r_qty, items?.item_id, po_no]
+          )
+        );
+        await Promise.all(promises);
+        return "GRN COMPLETED !!!";
+      } catch (error) {
+        throw new Error("Failed to update GRN status: " + error.message);
+      }
+    };
 
-    const find_last_grn = await query(
-      `SELECT * FROM grn 
-       WHERE po_no = ? 
-         AND grn_no = (SELECT MAX(grn_no) FROM grn WHERE po_no = ?)`,
-      [po_no, po_no]
+    Promise.all([grn_child, update_stock, update_grn_status()]);
+
+    // const find_complete_po = await query(
+    //   `SELECT * FROM po_child
+    //    WHERE po_no = ?
+    //      AND release_qty = qty`,
+    //   [po_no]
+    // );
+
+    let find_complete_po = await query(
+      `SELECT * FROM po_child
+       WHERE po_no = ? `,
+      [po_no]
     );
-
-    let check_all_qty = find_last_grn?.every((items) => items?.p_qty === 0);
+    find_complete_po = find_complete_po.every(
+      (items) => items?.release_qty === items?.qty
+    );
+    console.log("find_complete_po", find_complete_po);
 
     const updateGrnCompleted = async () => {
-      if (check_all_qty) {
+      if (find_complete_po) {
         await query(`UPDATE grn SET grn_completed = ? WHERE po_no = ?`, [
           true,
           po_no,
@@ -293,7 +336,7 @@ const create_grn = asyncHandler(async (req, res, next) => {
     };
 
     const updatePoCompleted = async () => {
-      if (check_all_qty) {
+      if (find_complete_po) {
         await query(
           `UPDATE po_master SET po_completed = ?, grn_transaction = ? WHERE po_no = ?`,
           [true, true, po_no]
@@ -309,6 +352,13 @@ const create_grn = asyncHandler(async (req, res, next) => {
     };
 
     const createSupplierLedger = async () => {
+      const find_last_grn = await query(
+        `SELECT * FROM grn 
+       WHERE po_no = ? 
+         AND grn_no = (SELECT MAX(grn_no) FROM grn WHERE po_no = ?)`,
+        [po_no, po_no]
+      );
+
       const payable = find_last_grn.reduce(
         (sum, item) => sum + (item?.amount || 0),
         0

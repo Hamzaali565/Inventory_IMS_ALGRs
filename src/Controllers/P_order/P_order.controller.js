@@ -314,13 +314,27 @@ const sorted_po = asyncHandler(async (req, res) => {
     grn_transaction_check = grn_transaction_check.filter(
       (items) => items?.p_qty !== 0
     );
+
+    let falsy_grn = await query(
+      `SELECT * FROM po_child WHERE po_no = ? AND grn_status = ?`,
+      [po_no, false]
+    );
+    if (falsy_grn.length !== 0) {
+      falsy_grn = falsy_grn.map((items) => ({
+        ...items,
+        t_qty: items?.qty,
+        p_qty: items?.qty,
+      }));
+    }
+    console.log("falsy_grn", falsy_grn);
+
     console.log("grn_transaction_checks", grn_transaction_check);
     res
       .status(200)
       .json(
         new ApiResponse(
           200,
-          { data: grn_transaction_check },
+          { data: [...grn_transaction_check, ...falsy_grn] },
           "grn_transaction_check"
         )
       );
