@@ -278,19 +278,16 @@ const sorted_po = asyncHandler(async (req, res) => {
   try {
     const { po_no } = req.query;
     if (!po_no) throw new ApiError(400, "po_no is required !!!");
-    console.log("po_no", po_no);
 
     let get_authentic_po = await query(
       `SELECT * FROM po_master WHERE po_no = ? AND po_completed = ? AND grn_transaction = ?`,
       [po_no, false, false]
     );
-    console.log("get_authentic_po_master", get_authentic_po);
 
     if (get_authentic_po.length !== 0) {
       get_authentic_po = await query(`SELECT * FROM po_child WHERE po_no = ?`, [
         po_no,
       ]);
-      console.log("get_authentic_po", get_authentic_po);
       res.status(200).json(new ApiResponse(200, { data: get_authentic_po }));
       return;
     }
@@ -310,34 +307,28 @@ const sorted_po = asyncHandler(async (req, res) => {
       return;
     }
 
-    console.log("grn_transaction_checks before filter", grn_transaction_check);
     grn_transaction_check = grn_transaction_check.filter(
       (items) => items?.p_qty !== 0
     );
 
-    let falsy_grn = await query(
-      `SELECT * FROM po_child WHERE po_no = ? AND grn_status = ?`,
-      [po_no, false]
-    );
+    let falsy_grn = await query(`SELECT * FROM po_child WHERE po_no = ?`, [
+      po_no,
+    ]);
     if (falsy_grn.length !== 0) {
+      falsy_grn = falsy_grn?.filter(
+        (items) => items?.qty !== items?.release_qty
+      );
       falsy_grn = falsy_grn.map((items) => ({
         ...items,
         t_qty: items?.qty,
-        p_qty: items?.qty,
+        p_qty: items?.qty - items?.release_qty,
       }));
     }
-    console.log("falsy_grn", falsy_grn);
 
     console.log("grn_transaction_checks", grn_transaction_check);
     res
       .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          { data: [...grn_transaction_check, ...falsy_grn] },
-          "grn_transaction_check"
-        )
-      );
+      .json(new ApiResponse(200, { data: falsy_grn }, "grn_transaction_check"));
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;

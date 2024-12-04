@@ -30,7 +30,7 @@ const create_grn = asyncHandler(async (req, res, next) => {
     let AuthenticData = [];
     if (find_last_entery.length !== 0) {
       find_last_entery = find_last_entery.filter((items) => items?.p_qty !== 0);
-      console.log("find_last_entery", find_last_entery);
+      //
 
       // find_last_entery = data.map((items) => {
       //   let newData = find_last_entery.filter(
@@ -43,13 +43,10 @@ const create_grn = asyncHandler(async (req, res, next) => {
       // console.log(data.map((item) => item?.item_id));
 
       find_last_entery.forEach((items) => {
-        console.log("items", items);
         // console.log("items", items?.ie);
         let find_current_pendings = data.find(
           (IRQ) => IRQ?.id === items?.id && IRQ?.r_qty > items?.p_qty
         );
-
-        console.log("find_current_pendings", find_current_pendings);
 
         if (find_current_pendings)
           throw new ApiError(
@@ -57,14 +54,10 @@ const create_grn = asyncHandler(async (req, res, next) => {
             `Recieved quantity is greater than pending quantity at line !!!`
           );
         let findData = data?.find((DataObj) => DataObj?.id === items?.id);
-        console.log("findData", findData);
 
         if (findData) {
-          // let iPush = [];
           findData.p_qty = findData?.p_qty - findData?.r_qty;
           AuthenticData.push(findData);
-
-          console.log("AuthenticData", AuthenticData);
         } else {
           throw new ApiError(
             400,
@@ -73,12 +66,22 @@ const create_grn = asyncHandler(async (req, res, next) => {
         }
       });
     }
+
+    // const po_update = async () => {
+
+    //   } else {
+    //     return false;
+    //   }
+    // };
+
     if (find_last_entery.length !== 0) {
       let find_remains_of_po = await query(
         `SELECT * FROM po_child
-       WHERE po_no = ? AND release_qty = ? `,
+         WHERE po_no = ? AND release_qty = ? `,
         [po_no, 0]
       );
+      console.log("find_remains_of_po", find_remains_of_po);
+
       if (find_remains_of_po.length !== 0) {
         find_remains_of_po.forEach((items) => {
           let findData = data.find(
@@ -89,6 +92,9 @@ const create_grn = asyncHandler(async (req, res, next) => {
           if (findData) {
             findData.p_qty = findData?.p_qty - findData?.r_qty;
             AuthenticData.push(findData);
+            console.log("AuthenticData===", AuthenticData);
+
+            return true;
           }
         });
       }
@@ -400,4 +406,276 @@ const create_grn = asyncHandler(async (req, res, next) => {
   }
 });
 
-export { create_grn };
+const create_grn_2 = asyncHandler(async (req, res, next) => {
+  let connection;
+  try {
+    const {
+      grn_date,
+      bill_no,
+      remarks,
+      po_no,
+      location,
+      supplier_name,
+      supplier_id,
+      location_id,
+      grnDetails,
+    } = req.body;
+    let data = grnDetails;
+    console.log("data", data);
+
+    if (!po_no || !grn_date)
+      throw new ApiError(400, "All parameters are required !!!");
+
+    if (!data || !Array.isArray(data) || data.length === 0)
+      throw new ApiError(
+        400,
+        "Data is a required field, data should be array, data should contain atleast one object !!!"
+      );
+
+    console.log(data);
+
+    data.map((items, index) => {
+      const {
+        item_id,
+        item_name,
+        unit_id,
+        item_unit,
+        t_qty,
+        r_qty,
+        charges,
+        amount,
+        p_size_status,
+        p_size_qty,
+        po_no,
+        batch_no,
+        batch_qty,
+        p_size_stock,
+      } = items;
+
+      if (
+        ![
+          item_id,
+          item_name,
+          unit_id,
+          item_unit,
+          t_qty,
+          r_qty,
+          charges,
+          amount,
+          po_no,
+          batch_no,
+          batch_qty,
+        ].every(Boolean)
+      )
+        throw new ApiError(400, `Sone data miss at line no ${index + 1}`);
+    });
+    let master_grn = await query(
+      `INSERT INTO grn_master(grn_date, bill_no, remarks, c_user, location, location_id, supplier_name, supplier_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        grn_date,
+        bill_no,
+        remarks,
+        "Hamza",
+        location,
+        location_id,
+        supplier_name,
+        supplier_id,
+      ]
+    );
+    let grn_no = master_grn.insertId;
+
+    let dataRes = data.map((items) => ({
+      ...items,
+      grn_no,
+      location,
+      location_id,
+    }));
+
+    console.log("formatted Data", dataRes);
+
+    const values = dataRes.flatMap((items) => [
+      items?.grn_no,
+      items?.item_id,
+      items?.item_name,
+      items?.unit_id,
+      items?.item_unit,
+      items?.t_qty,
+      items?.r_qty,
+      items?.p_qty,
+      items?.charges,
+      items?.amount,
+      items?.p_size_status,
+      items?.p_size_qty,
+      items?.po_no,
+      items?.batch_no,
+    ]);
+    const placeholders = Array(dataRes.length)
+      .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .join(", ");
+
+    // get po_child of grn_status false an push in authentic_po
+
+    const grn_child = new Promise(async (resolve, reject) => {
+      try {
+        await query(
+          `INSERT INTO grn (grn_no, item_id, item_name, unit_id, item_unit, t_qty,
+        r_qty, p_qty, charges, amount, p_size_status, p_size_qty, po_no, batch_no) 
+        VALUES ${placeholders}`,
+          values
+        );
+        resolve("Response Created");
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    console.log("I am DataRes 😎", dataRes);
+
+    const stock_values = dataRes.flatMap((items) => [
+      items.item_name,
+      items.item_id,
+      items.batch_qty,
+      items.batch_no,
+      "Good Recipt Note",
+      "hamza",
+      items.location,
+      items.location_id,
+      items.p_size_status,
+      items.p_size_qty,
+      items.p_size_stock,
+      items.item_unit,
+      items.unit_id,
+      grn_no,
+    ]);
+
+    const stock_placeholder = Array(dataRes.length)
+      .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .join(", ");
+
+    const update_stock = new Promise(async (resolve, reject) => {
+      try {
+        await query(
+          `INSERT INTO stock (item_name, item_id, batch_qty, batch_no, input_type,
+               c_user, location, location_id, p_size_status, p_size_qty, p_size_stock,
+               item_unit, unit_id, grn_no)
+               VALUES ${stock_placeholder}`,
+          stock_values
+        );
+        resolve("Stock added successfully !!!");
+      } catch (error) {
+        reject("Insert stock failed", error);
+      }
+    });
+
+    const update_grn_status = async () => {
+      try {
+        const promises = dataRes.map((items) =>
+          query(
+            `UPDATE po_child SET grn_status = ?, release_qty = release_qty + ? WHERE item_id = ? AND po_no = ?`,
+            [true, items?.r_qty, items?.item_id, po_no]
+          )
+        );
+        await Promise.all(promises);
+        return "GRN COMPLETED !!!";
+      } catch (error) {
+        throw new Error("Failed to update GRN status: " + error.message);
+      }
+    };
+
+    Promise.all([grn_child, update_stock, update_grn_status()]);
+
+    // const find_complete_po = await query(
+    //   `SELECT * FROM po_child
+    //    WHERE po_no = ?
+    //      AND release_qty = qty`,
+    //   [po_no]
+    // );
+
+    let find_complete_po = await query(
+      `SELECT * FROM po_child
+       WHERE po_no = ? `,
+      [po_no]
+    );
+    find_complete_po = find_complete_po.every(
+      (items) => items?.release_qty === items?.qty
+    );
+    console.log("find_complete_po", find_complete_po);
+
+    const updateGrnCompleted = async () => {
+      if (find_complete_po) {
+        await query(`UPDATE grn SET grn_completed = ? WHERE po_no = ?`, [
+          true,
+          po_no,
+        ]);
+        return "GRN Completed";
+      }
+      return "GRN not completed yet";
+    };
+
+    const updatePoCompleted = async () => {
+      if (find_complete_po) {
+        await query(
+          `UPDATE po_master SET po_completed = ?, grn_transaction = ? WHERE po_no = ?`,
+          [true, true, po_no]
+        );
+        return "PO Completed";
+      } else {
+        await query(
+          `UPDATE po_master SET grn_transaction = ? WHERE po_no = ?`,
+          [true, po_no]
+        );
+        return "GRN Transaction set to true";
+      }
+    };
+
+    const createSupplierLedger = async () => {
+      const find_last_grn = await query(
+        `SELECT * FROM grn 
+       WHERE po_no = ? 
+         AND grn_no = (SELECT MAX(grn_no) FROM grn WHERE po_no = ?)`,
+        [po_no, po_no]
+      );
+
+      const payable = find_last_grn.reduce(
+        (sum, item) => sum + (item?.amount || 0),
+        0
+      );
+
+      await query(
+        `INSERT INTO supplier_ledger (grn_no, supplier_name, supplier_id, payable, c_user) VALUES (?, ?, ?, ?, ?)`,
+        [grn_no, supplier_name, supplier_id, payable, "hamza"]
+      );
+      return "Supplier Ledger Created";
+    };
+
+    await Promise.all([
+      updateGrnCompleted(),
+      updatePoCompleted(),
+      createSupplierLedger(),
+    ])
+      .then(() => {
+        console.log("update completed");
+        res
+          .status(200)
+          .json(new ApiResponse(200, { data: "Data saved Successfully" }));
+      })
+      .catch((error) => {
+        console.log("update failed");
+        next(new ApiError(400, error));
+      });
+  } catch (error) {
+    await query("ROLLBACK");
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log(error);
+    throw new ApiError(400, "Internal server error !!!");
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+});
+
+export { create_grn, create_grn_2 };
