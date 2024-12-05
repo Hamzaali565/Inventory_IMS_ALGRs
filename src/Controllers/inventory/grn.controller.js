@@ -434,6 +434,43 @@ const create_grn_2 = asyncHandler(async (req, res, next) => {
 
     console.log(data);
 
+    const find_remaining = await query(
+      `SELECT *, (qty - release_qty) AS remaining_qty FROM po_child WHERE po_no = ?`,
+      [po_no]
+    );
+    console.log("Original find_remaining:", find_remaining);
+    const check_grn_completion = find_remaining.every(
+      (findRem) => findRem.remaining_qty === 0
+    );
+    // Filter `find_remaining` based on `item_id` availability in `data`
+    if (!check_grn_completion) {
+      const filtered_remaining = find_remaining.filter((remainingItem) =>
+        data.some((dataItem) => dataItem.item_id === remainingItem.item_id)
+      );
+      console.log("Filtered Remaining Data:", filtered_remaining);
+      data.forEach((dataItem) => {
+        const matchingRemaining = find_remaining.find(
+          (remainingItem) => remainingItem.item_id === dataItem.item_id
+        );
+        if (!matchingRemaining) {
+          throw new Error(
+            `Item ID ${dataItem.item_id} not found in remaining stock!`
+          );
+        }
+
+        // Check if r_qty exceeds remaining_qty
+        if (dataItem.r_qty > matchingRemaining.remaining_qty) {
+          throw new Error(
+            `Received quantity (r_qty: ${dataItem.r_qty}) exceeds remaining quantity (remaining_qty: ${matchingRemaining.remaining_qty}) for item ID: ${dataItem.item_id}.`
+          );
+        }
+      });
+
+      console.log("All quantities are valid.");
+    } else {
+      throw new ApiError(400, "This transaction is completed !!!");
+    }
+
     data.map((items, index) => {
       const {
         item_id,
@@ -492,8 +529,6 @@ const create_grn_2 = asyncHandler(async (req, res, next) => {
       location_id,
     }));
 
-    console.log("formatted Data", dataRes);
-
     const values = dataRes.flatMap((items) => [
       items?.grn_no,
       items?.item_id,
@@ -529,8 +564,6 @@ const create_grn_2 = asyncHandler(async (req, res, next) => {
         reject(error);
       }
     });
-
-    console.log("I am DataRes 😎", dataRes);
 
     const stock_values = dataRes.flatMap((items) => [
       items.item_name,
