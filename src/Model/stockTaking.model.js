@@ -22,4 +22,19 @@ p_size_stock DECIMAL(30, 2)
 )
 `;
 
-export { stock_taking_model };
+const previous_stock = `
+CREATE TABLE IF NOT EXISTS previous_stock(
+id INT AUTO_INCREMENT PRIMARY KEY,
+item_name VARCHAR(300) NOT NULL, 
+item_id INT NOT NULL, 
+unit_id INT NOT NULL, 
+item_unit VARCHAR(300) NOT NULL, 
+batch_no VARCHAR(300) NOT NULL, 
+gr_no INT NOT NULL, 
+issued_qty DECIMAL(30, 2) NOT NULL, 
+invoice_no INT NOT NULL, 
+c_user VARCHAR(300) NOT NULL
+)
+`;
+
+export { stock_taking_model, previous_stock };
