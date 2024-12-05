@@ -73,8 +73,8 @@ const login_user = asyncHandler(async (req, res) => {
     if (error instanceof ApiError) {
       throw error;
     }
-    console.log(error);
-    throw new ApiError(400, "Internal server error !!!");
+    console.log(error.message);
+    throw new ApiError(400, error.message);
   }
 });
 
