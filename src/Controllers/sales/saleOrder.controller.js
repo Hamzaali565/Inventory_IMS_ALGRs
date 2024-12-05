@@ -157,7 +157,7 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
       // master updated
       let create_invoice = await query(
         `INSERT INTO invoice_master(c_user, total_charges, total_expense) VALUES (?, ?, ?)`,
-        ["Hamza", totalPrice, totalPurchase]
+        [req.user, totalPrice, totalPurchase]
       );
       let invoice_no = create_invoice?.insertId;
       // ------
@@ -173,7 +173,7 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
         items?.item_unit,
         items?.d_qty,
         invoice_no,
-        "Hamza",
+        req.user,
       ]);
       // get po_child of grn_status false an push in authentic_po
 
@@ -200,7 +200,7 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
         items?.item_unit,
         items?.d_qty,
         invoice_no,
-        "Hamza",
+        req.user,
       ]);
       const placeholders_of_local_purchasing = Array(lp_items.length)
         .fill("(?, ?, ?, ?, ?, ?, ?)")
@@ -257,7 +257,7 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
       // master updated
       let create_invoice = await query(
         `INSERT INTO invoice_master(c_user, total_charges, total_expense) VALUES (?, ?, ?)`,
-        ["Hamza", totalPrice, totalPurchase]
+        [req.user, totalPrice, totalPurchase]
       );
 
       let invoice_no = create_invoice?.insertId;
@@ -270,7 +270,7 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
         items?.item_unit,
         items?.d_qty,
         invoice_no,
-        "Hamza",
+        req.user,
       ]);
 
       const placeholders = Array(dataRecieveFromUser.length)
@@ -300,7 +300,7 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
           items?.item_unit,
           items?.d_qty,
           invoice_no,
-          "Hamza",
+          req.user,
         ]);
         const placeholders_of_local_purchasing = Array(lp_items.length)
           .fill("(?, ?, ?, ?, ?, ?, ?)")
@@ -349,7 +349,7 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
         items?.grn_no,
         items?.issued_qty,
         invoice_no,
-        "Hamza",
+        req.user,
       ]);
 
       console.log("values_of_prev_stock", values_of_prev_stock);

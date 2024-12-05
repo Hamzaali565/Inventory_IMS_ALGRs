@@ -119,7 +119,7 @@ const create_grn = asyncHandler(async (req, res, next) => {
         grn_date,
         bill_no,
         remarks,
-        "Hamza",
+        req?.user,
         location,
         location_id,
         supplier_name,
@@ -177,7 +177,7 @@ const create_grn = asyncHandler(async (req, res, next) => {
       items.batch_qty,
       items.batch_no,
       "Good Recipt Note",
-      "hamza",
+      req.user,
       items.location,
       items.location_id,
       items.p_size_status,
@@ -283,7 +283,7 @@ const create_grn = asyncHandler(async (req, res, next) => {
 
       await query(
         `INSERT INTO supplier_ledger (grn_no, supplier_name, supplier_id, payable, c_user) VALUES (?, ?, ?, ?, ?)`,
-        [grn_no, supplier_name, supplier_id, payable, "hamza"]
+        [grn_no, supplier_name, supplier_id, payable, req.user]
       );
       return "Supplier Ledger Created";
     };

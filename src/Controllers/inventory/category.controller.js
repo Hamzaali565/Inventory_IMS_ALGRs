@@ -8,7 +8,7 @@ const create_category = asyncHandler(async (req, res) => {
     const { category_name } = req.body;
     if (!category_name)
       throw new ApiError(400, "All parameters are required !!!");
-    let c_user = "hamza";
+    let c_user = req.user;
     const response = await query(
       `INSERT INTO category (category_name, c_user) VALUES ('${category_name}', '${c_user}')`
     );

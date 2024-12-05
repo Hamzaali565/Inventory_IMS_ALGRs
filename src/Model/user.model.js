@@ -1,0 +1,10 @@
+const user_model = `
+CREATE TABLE IF NOT EXISTS user (
+id INT AUTO_INCREMENT PRIMARY KEY,
+user_id VARCHAR(300) NOT NULL,
+cred VARCHAR(300) NOT NULL,
+type VARCHAR(300),
+c_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+`;
+export { user_model };

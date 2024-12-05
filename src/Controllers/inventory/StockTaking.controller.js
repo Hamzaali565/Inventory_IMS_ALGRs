@@ -43,7 +43,7 @@ const stock_upload = asyncHandler(async (req, res) => {
       items.batch_qty,
       items.batch_no,
       items.input_type,
-      "hamza",
+      req.user,
       items.location,
       items.location_id,
       items.p_size_status,

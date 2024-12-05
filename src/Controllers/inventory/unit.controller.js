@@ -5,11 +5,11 @@ import { query } from "../../Database/database.config.js";
 // ###
 const create_unit = asyncHandler(async (req, res) => {
   try {
-    const { unit_name, c_user } = req.body;
-    if (![unit_name, c_user].every(Boolean))
+    const { unit_name } = req.body;
+    if (![unit_name].every(Boolean))
       throw new ApiError(400, "All parameters are required !!!");
     const response = await query(
-      `INSERT INTO units (unit_name, c_user) VALUES ('${unit_name}', '${c_user}') `
+      `INSERT INTO units (unit_name, c_user) VALUES ('${unit_name}', '${req.user}') `
     );
     res
       .status(200)

@@ -27,7 +27,7 @@ const create_po = asyncHandler(async (req, res) => {
     const createMaster = await query(
       `INSERT INTO po_master (po_date, supplier_name, supplier_id, c_user, location, location_id)
          VALUES (?, ?, ?, ?, ?, ?)`,
-      [po_date, supplier_name, supplier_id, "Hamza", location, location_id]
+      [po_date, supplier_name, supplier_id, req.user, location, location_id]
     );
 
     const insertedData = await query(
@@ -212,7 +212,7 @@ const update_po = asyncHandler(async (req, res, next) => {
             supplier_id,
             location,
             location_id,
-            "Hamza",
+            req.user,
             po_no,
           ]
         );

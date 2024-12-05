@@ -11,7 +11,6 @@ const createItem = asyncHandler(async (req, res, next) => {
       item_unit,
       p_price,
       s_price,
-      c_user,
       category,
       category_id,
       p_size_status,
@@ -28,7 +27,6 @@ const createItem = asyncHandler(async (req, res, next) => {
         item_unit,
         p_price,
         s_price,
-        c_user,
         category,
         category_id,
         scan_code,
@@ -39,7 +37,7 @@ const createItem = asyncHandler(async (req, res, next) => {
     // const createMaster = await query(
     //   `INSERT INTO po_master (po_date, supplier_name, supplier_id, c_user, location, location_id)
     //      VALUES (?, ?, ?, ?, ?, ?)`,
-    //   [po_date, supplier_name, supplier_id, "Hamza", location, location_id]
+    //   [po_date, supplier_name, supplier_id, req.user, location, location_id]
     // );
 
     const response = await query(
@@ -53,7 +51,7 @@ const createItem = asyncHandler(async (req, res, next) => {
         item_unit,
         p_price,
         s_price,
-        c_user,
+        req.user,
         category,
         category_id,
         p_size_status,
@@ -151,7 +149,7 @@ const update_item = asyncHandler(async (req, res) => {
         s_price,
         category,
         category_id,
-        "hamza",
+        req.user,
         p_size_status,
         p_size_qty,
         p_price_per_size,

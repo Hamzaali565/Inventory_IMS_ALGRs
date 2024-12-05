@@ -9,6 +9,6 @@ app.use(
     credentials: true,
   })
 );
-
+// app.post('/', (req, res)=>res.cookie)
 routeSummary(app);
 export { app };
