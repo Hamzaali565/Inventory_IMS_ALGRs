@@ -18,7 +18,16 @@ const create_grn = asyncHandler(async (req, res, next) => {
       grnDetails,
     } = req.body;
     let data = grnDetails;
+    console.log("data22", data);
+
+    data = data.map((items) => {
+      if (items?.p_size_stock === 0) {
+        return { ...items, p_size_stock: +items?.batch_qty };
+      }
+      return items;
+    });
     console.log("data", data);
+    // return;
 
     if (!po_no || !grn_date)
       throw new ApiError(400, "All parameters are required !!!");
