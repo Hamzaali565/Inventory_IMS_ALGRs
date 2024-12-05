@@ -149,7 +149,7 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
 
     let updatedDataBase;
     if (dataRecieveFromUser.length !== 0) {
-      updatedDataBase = updateStock(dataBase);
+      updatedDataBase = updateStock(dataBase, dataRecieveFromUser);
     }
     console.log("updatedDataBase", updatedDataBase);
 
@@ -325,10 +325,11 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
 
       const update_stock_batch_status = async () => {
         try {
+          console.log("updatedDataBase", updatedDataBase);
           const promises = updatedDataBase.map((items) =>
             query(
-              `UPDATE stock SET batch_status = ? WHERE item_id = ? AND p_size_qty = ?`,
-              [false, items?.id, 0]
+              `UPDATE stock SET batch_status = ? WHERE item_id = ? AND p_size_stock = ?`,
+              [false, items?.item_id, 0]
             )
           );
           await Promise.all(promises);
