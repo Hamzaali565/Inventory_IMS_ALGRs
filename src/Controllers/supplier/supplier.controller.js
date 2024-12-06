@@ -111,9 +111,70 @@ const supplier_ledger = asyncHandler(async (req, res) => {
   }
 });
 
+const payment_false_grn = asyncHandler(async (req, res) => {
+  try {
+    const response = await query(
+      `SELECT *, (payable - payed) AS difference
+       FROM supplier_ledger
+       WHERE (payable - payed) > 0 AND completed = ?`,
+      [false]
+    );
+    if (response.length === 0) throw new ApiError(404, "Data not found !!!");
+    res.status(200).json(new ApiResponse(200, { data: response }));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log("Error ", error);
+    throw new ApiError(500, "Internal server error", error);
+  }
+});
+
+const create_payment = asyncHandler(async (req, res) => {
+  try {
+    const {
+      supplier_id,
+      supplier_name,
+      paying,
+      payment_type,
+      remarks,
+      grn_no,
+    } = req.body;
+    if (
+      ![supplier_id, supplier_name, paying, payment_type, grn_no].every(Boolean)
+    )
+      throw new ApiError(404, "All parameters are required !!!");
+    const check_valid_payment = await query(
+      `
+        SELECT (payable - payed) AS difference
+        FROM supplier_ledger
+        WHERE (payable - payed) > 0 AND grn_no = ? AND completed = ?`,
+      [grn_no, false]
+    );
+    if (check_valid_payment.length === 0)
+      throw new ApiError(404, "Invalid request as payment is clear already!!!");
+    if (paying > check_valid_payment[0]?.difference) {
+      throw new ApiError(
+        404,
+        "You are paying greater than pending quantity!!!"
+      );
+    }
+    // create supplier payment table
+    // add payed + paying in supplier ledger
+    // check if payed payment === paying  set completed to true
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log(error);
+    throw new ApiError(500, "Internal server error !!!");
+  }
+});
+
 export {
   create_supplier,
   retrieved_supplier,
   update_supplier,
   supplier_ledger,
+  payment_false_grn,
 };
