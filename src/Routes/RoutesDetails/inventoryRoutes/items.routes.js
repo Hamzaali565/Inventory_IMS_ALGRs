@@ -19,7 +19,10 @@ import {
   retrieved_location,
   update_location,
 } from "../../../Controllers/inventory/location.controller.js";
-import { stock_upload } from "../../../Controllers/inventory/StockTaking.controller.js";
+import {
+  current_stock,
+  stock_upload,
+} from "../../../Controllers/inventory/StockTaking.controller.js";
 import { create_grn } from "../../../Controllers/inventory/grn.controller.js";
 
 const router = Router();
@@ -45,6 +48,7 @@ router.route("/location").put(update_location);
 
 // stock
 router.route("/stock").post(stock_upload);
+router.route("/stock").get(current_stock);
 
 // grn
 router.route("/grn").post(create_grn);

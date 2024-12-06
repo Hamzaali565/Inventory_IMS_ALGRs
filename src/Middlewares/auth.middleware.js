@@ -7,7 +7,6 @@ import jwt from "jsonwebtoken";
 const auth_middleware = asyncHandler(async (req, _, next) => {
   try {
     const token = req.cookies?.token;
-    console.log(token);
 
     if (!token) throw new ApiError(404, "Token not found !!!");
     const decoded = jwt.decode(token, process.env.TOP_SECRET);

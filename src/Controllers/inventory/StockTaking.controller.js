@@ -7,6 +7,7 @@ const stock_upload = asyncHandler(async (req, res) => {
   let connection;
   try {
     const { data } = req.body;
+    console.log(data);
 
     if (!data || !Array.isArray(data) || data.length === 0)
       throw new ApiError(
@@ -49,14 +50,16 @@ const stock_upload = asyncHandler(async (req, res) => {
       items.p_size_status,
       items.p_size_qty,
       items.p_size_stock,
+      items?.unit_id,
+      items?.item_unit,
     ]);
 
     const placeholders = Array(data.length)
-      .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? ,?)")
       .join(", ");
 
     const response = await query(
-      `INSERT INTO stock (item_name, item_id, batch_qty, batch_no, input_type, c_user, location, location_id, p_size_status, p_size_qty, p_size_stock) 
+      `INSERT INTO stock (item_name, item_id, batch_qty, batch_no, input_type, c_user, location, location_id, p_size_status, p_size_qty, p_size_stock, unit_id, item_unit) 
        VALUES ${placeholders}`,
       values
     );
@@ -78,4 +81,21 @@ const stock_upload = asyncHandler(async (req, res) => {
   }
 });
 
-export { stock_upload };
+const current_stock = asyncHandler(async (req, res) => {
+  try {
+    const response = await query(`SELECT * FROM stock WHERE batch_status = ?`, [
+      true,
+    ]);
+    if (Array(response).length === 0)
+      throw new ApiError(404, "No stock found !!!");
+    res.status(200).json(new ApiResponse(200, { data: response }));
+  } catch (error) {
+    if (Error instanceof ApiError) {
+      throw error;
+    }
+    console.log("Error +", error);
+    throw new ApiError(500, "Internal server error !!");
+  }
+});
+
+export { stock_upload, current_stock };
