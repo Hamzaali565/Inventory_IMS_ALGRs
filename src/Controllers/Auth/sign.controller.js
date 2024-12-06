@@ -43,6 +43,7 @@ const login_user = asyncHandler(async (req, res) => {
     const { user_id, cred } = req.body;
     if (![user_id, cred].every(Boolean))
       throw new ApiError(404, "All parameters are required !!!");
+
     let userI = user_id.toLowerCase();
     const user_check = await query(`SELECT * FROM user WHERE user_id = ?`, [
       userI,
@@ -56,11 +57,14 @@ const login_user = asyncHandler(async (req, res) => {
       process.env.TOP_SECRET,
       { expiresIn: "1d" }
     );
-    console.log("token", token);
-    //     let cookies = req.cookies
-    //   let cookiess = res.cookie
+    const cookieOptions = {
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+      maxAge: 24 * 60 * 60 * 1000,
+    };
     res
-      .cookie(token)
+      .cookie("token", token, cookieOptions)
       .status(200)
       .json(
         new ApiResponse(
