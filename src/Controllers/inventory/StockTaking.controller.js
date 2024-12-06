@@ -98,4 +98,24 @@ const current_stock = asyncHandler(async (req, res) => {
   }
 });
 
-export { stock_upload, current_stock };
+const previous_stock = asyncHandler(async (req, res) => {
+  try {
+    const { fromDate, toDate } = req?.query;
+    if (!fromDate || !toDate) throw new ApiError("Both dates are required !!!");
+    let f_date = moment(toDate).startOf("day").format("YYYY-MM-DD HH:mm:ss"); // 2024-12-24 00:00:00
+    let t_date = moment(fromDate).endOf("day").format("YYYY-MM-DD HH:mm:ss");
+    const response = await query(
+      `SELECT * FROM previous_stock WHERE c_date >= ? AND c_date <= ?`,
+      [f_date, t_date]
+    );
+    if (response.length === 0) throw new ApiError(404, "No Data Found !!!");
+    res.status(200).json(new ApiResponse(200, { data: response }));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(500, "Internal server error !!!");
+  }
+});
+
+export { stock_upload, current_stock, previous_stock };
