@@ -21,6 +21,7 @@ import {
 } from "../../../Controllers/inventory/location.controller.js";
 import {
   current_stock,
+  previous_stock,
   stock_upload,
 } from "../../../Controllers/inventory/StockTaking.controller.js";
 import { create_grn } from "../../../Controllers/inventory/grn.controller.js";
@@ -49,6 +50,7 @@ router.route("/location").put(update_location);
 // stock
 router.route("/stock").post(stock_upload);
 router.route("/stock").get(current_stock);
+router.route("/p-stock").get(previous_stock);
 
 // grn
 router.route("/grn").post(create_grn);

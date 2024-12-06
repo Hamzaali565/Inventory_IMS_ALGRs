@@ -1,3 +1,4 @@
+import moment from "moment";
 import { query } from "../../Database/database.config.js";
 import { ApiError } from "../../Utils/ApiError.js";
 import { ApiResponse } from "../../Utils/ApiResponse.js";
@@ -81,4 +82,38 @@ const update_supplier = asyncHandler(async (req, res) => {
   }
 });
 
-export { create_supplier, retrieved_supplier, update_supplier };
+const supplier_ledger = asyncHandler(async (req, res) => {
+  try {
+    const { fromDate, toDate } = req?.query;
+    console.log("req?.query", req.query);
+
+    if (!fromDate || !toDate)
+      throw new ApiError(404, "Both dates are required !!!");
+    let f_date = moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss"); // 2024-12-24 00:00:00
+    let t_date = moment(toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss");
+    console.log({ f_date, t_date, mesL: "sdajsd" });
+
+    const response = await query(
+      ` SELECT * 
+       FROM supplier_ledger 
+       WHERE completed = ? 
+       AND c_date BETWEEN ? AND ?`,
+      [false, f_date, t_date]
+    );
+    if (response.length === 0) throw new ApiError(404, "No Data Found !!!");
+    res.status(200).json(new ApiResponse(200, { data: response }));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log(error);
+    throw new ApiError(500, "Internal server error !!!");
+  }
+});
+
+export {
+  create_supplier,
+  retrieved_supplier,
+  update_supplier,
+  supplier_ledger,
+};

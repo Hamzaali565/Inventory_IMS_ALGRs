@@ -1,3 +1,4 @@
+import moment from "moment";
 import { query } from "../../Database/database.config.js";
 import { ApiError } from "../../Utils/ApiError.js";
 import { ApiResponse } from "../../Utils/ApiResponse.js";
@@ -101,11 +102,18 @@ const current_stock = asyncHandler(async (req, res) => {
 const previous_stock = asyncHandler(async (req, res) => {
   try {
     const { fromDate, toDate } = req?.query;
-    if (!fromDate || !toDate) throw new ApiError("Both dates are required !!!");
-    let f_date = moment(toDate).startOf("day").format("YYYY-MM-DD HH:mm:ss"); // 2024-12-24 00:00:00
-    let t_date = moment(fromDate).endOf("day").format("YYYY-MM-DD HH:mm:ss");
+    console.log("req?.query", req.query);
+
+    if (!fromDate || !toDate)
+      throw new ApiError(404, "Both dates are required !!!");
+    let f_date = moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss"); // 2024-12-24 00:00:00
+    let t_date = moment(toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss");
+    console.log({ f_date, t_date, mesL: "sdajsd" });
+
     const response = await query(
-      `SELECT * FROM previous_stock WHERE c_date >= ? AND c_date <= ?`,
+      `SELECT * 
+       FROM previous_stock 
+       WHERE c_date BETWEEN ? AND ?`,
       [f_date, t_date]
     );
     if (response.length === 0) throw new ApiError(404, "No Data Found !!!");
@@ -114,6 +122,8 @@ const previous_stock = asyncHandler(async (req, res) => {
     if (error instanceof ApiError) {
       throw error;
     }
+    console.log(error);
+
     throw new ApiError(500, "Internal server error !!!");
   }
 });
