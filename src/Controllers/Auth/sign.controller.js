@@ -82,4 +82,20 @@ const login_user = asyncHandler(async (req, res) => {
   }
 });
 
-export { create_user, login_user };
+const logout_user = asyncHandler(async (req, res) => {
+  try {
+    const options = {
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+      maxAge: 24 * 60 * 60 * 1000,
+    };
+    return res
+      .status(200)
+      .clearCookie("token", options)
+      .json(new ApiResponse(200, "User Logged out"));
+  } catch (error) {
+    throw new ApiError(500, "Internal server error !!!");
+  }
+});
+export { create_user, login_user, logout_user };
