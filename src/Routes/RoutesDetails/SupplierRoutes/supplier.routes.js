@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  create_payment,
   create_supplier,
   payment_false_grn,
   retrieved_supplier,
@@ -14,5 +15,6 @@ router.route("/supplier").get(retrieved_supplier);
 router.route("/supplier").put(update_supplier);
 router.route("/supplier-ledger").get(supplier_ledger);
 router.route("/false-payment").get(payment_false_grn);
+router.route("/supplier-payment").post(create_payment);
 
 export default router;

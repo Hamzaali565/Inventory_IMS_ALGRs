@@ -23,4 +23,19 @@ u_user VARCHAR(300),
 u_date TIMESTAMP DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 )
 `;
-export { supplier_model, supplier_ledger_model };
+
+const supplier_payment_model = `
+CREATE TABLE IF NOT EXISTS supplier_payment (
+id INT AUTO_INCREMENT PRIMARY KEY,
+grn_no INT NOT NULL,
+supplier_name VARCHAR(300) NOT NULL,
+supplier_id INT NOT NULL,
+payment_type VARCHAR(300) NOT NULL,
+amount DECIMAL(30, 2) NOT NULL,
+remarks VARCHAR(300),
+c_user VARCHAR(300) NOT NULL,
+c_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+`;
+
+export { supplier_model, supplier_ledger_model, supplier_payment_model };

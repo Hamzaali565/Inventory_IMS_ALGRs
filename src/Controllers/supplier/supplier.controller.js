@@ -140,6 +140,7 @@ const create_payment = asyncHandler(async (req, res) => {
       remarks,
       grn_no,
     } = req.body;
+
     if (
       ![supplier_id, supplier_name, paying, payment_type, grn_no].every(Boolean)
     )
@@ -160,8 +161,62 @@ const create_payment = asyncHandler(async (req, res) => {
       );
     }
     // create supplier payment table
+    const payment = async () => {
+      try {
+        await query(
+          `INSERT INTO supplier_payment (grn_no, supplier_name, supplier_id, payment_type, amount, remarks, c_user) 
+           VALUES(?, ?, ?, ?, ?, ?, ?)`,
+          [
+            grn_no,
+            supplier_name,
+            supplier_id,
+            payment_type,
+            paying,
+            remarks,
+            req?.user,
+          ]
+        );
+        return "Payment table created !!!";
+      } catch (error) {
+        throw new Error("Payment Creation Failed");
+      }
+    };
+
     // add payed + paying in supplier ledger
+    const update_paying_column = async () => {
+      try {
+        await query(
+          `UPDATE supplier_ledger SET payed = payed + ? WHERE grn_no = ?`,
+          [paying, grn_no]
+        );
+        return "Paying column updated !!!";
+      } catch (error) {
+        throw new Error("Paying column update failed !!!");
+      }
+    };
+
+    await Promise.all([payment(), update_paying_column()]).catch((error) => {
+      throw new Error("Promise failed ", error);
+    });
+
     // check if payed payment === paying  set completed to true
+    const check_complete_payment = await query(
+      `SELECT * from supplier_ledger WHERE payable = payed AND grn_no = ?`,
+      [grn_no]
+    );
+    if (check_complete_payment.length > 0) {
+      await query(
+        `UPDATE supplier_ledger SET completed = true WHERE grn_no = ?`,
+        [grn_no]
+      );
+      res.status(200).json(new ApiResponse(200, "Payment completed !!!"));
+      return;
+    } else {
+      res
+        .status(200)
+        .json(new ApiResponse(200, "Response without payment complete"));
+      return;
+    }
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
@@ -177,4 +232,5 @@ export {
   update_supplier,
   supplier_ledger,
   payment_false_grn,
+  create_payment,
 };

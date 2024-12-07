@@ -12,6 +12,7 @@ import {
 import {
   supplier_ledger_model,
   supplier_model,
+  supplier_payment_model,
 } from "../Model/supplier.model.js";
 import { unitTable } from "../Model/unit.model.js";
 import { user_model } from "../Model/user.model.js";
@@ -35,6 +36,7 @@ const tablesSetup = async () => {
     await query(master_invoice);
     await query(child_invoice);
     await query(user_model);
+    await query(supplier_payment_model);
     console.log("table created successfully !!!");
   } catch (error) {
     console.log(`Table creration failed with ${error}`);
