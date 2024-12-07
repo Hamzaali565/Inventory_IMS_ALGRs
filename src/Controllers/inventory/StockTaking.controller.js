@@ -85,9 +85,16 @@ const stock_upload = asyncHandler(async (req, res) => {
 
 const current_stock = asyncHandler(async (req, res) => {
   try {
-    const response = await query(`SELECT * FROM stock WHERE batch_status = ?`, [
-      true,
-    ]);
+    const { fromDate, toDate } = req?.query;
+
+    if (!fromDate || !toDate)
+      throw new ApiError(404, "Both dates are required !!!");
+    let f_date = moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss"); // 2024-12-24 00:00:00
+    let t_date = moment(toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss");
+    const response = await query(
+      `SELECT * FROM stock WHERE batch_status = ? AND c_date BETWEEN ? AND ?`,
+      [true, f_date, t_date]
+    );
     if (Array(response).length === 0)
       throw new ApiError(404, "No stock found !!!");
     res.status(200).json(new ApiResponse(200, { data: response }));

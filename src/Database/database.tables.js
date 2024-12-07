@@ -1,6 +1,10 @@
 import { category_model } from "../Model/category.model.js";
 import { GRN_modal, master_GRN_modal } from "../Model/grn.model.js";
-import { child_invoice, master_invoice } from "../Model/invoice_model.js";
+import {
+  child_invoice,
+  invoice_clearance,
+  master_invoice,
+} from "../Model/invoice_model.js";
 import { createItem } from "../Model/item.model.js";
 import { local_purchasing } from "../Model/local_purchasing.model.js";
 import { location_modal } from "../Model/location.model.js";
@@ -37,6 +41,7 @@ const tablesSetup = async () => {
     await query(child_invoice);
     await query(user_model);
     await query(supplier_payment_model);
+    await query(invoice_clearance);
     console.log("table created successfully !!!");
   } catch (error) {
     console.log(`Table creration failed with ${error}`);

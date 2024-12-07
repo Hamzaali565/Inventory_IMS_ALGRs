@@ -24,4 +24,17 @@ c_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 `;
 
-export { master_invoice, child_invoice };
+const invoice_clearance = `
+CREATE TABLE IF NOT EXISTS credit_clearance(
+id INT AUTO_INCREMENT PRIMARY KEY,
+payment_type VARCHAR(300) NOT NULL, 
+remarks VARCHAR(300), 
+paying DECIMAL (30, 2) NOT NULL, 
+costumer_name VARCHAR(300) NOT NULL, 
+invoice_no INT NOT NULL,
+c_user VARCHAR(300) NOT NULL,
+c_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+`;
+
+export { master_invoice, child_invoice, invoice_clearance };

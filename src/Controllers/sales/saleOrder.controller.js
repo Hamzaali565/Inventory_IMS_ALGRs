@@ -2,6 +2,7 @@ import { asyncHandler } from "../../Utils/asyncHandler.js";
 import { ApiError } from "../../Utils/ApiError.js";
 import { ApiResponse } from "../../Utils/ApiResponse.js";
 import { query } from "../../Database/database.config.js";
+import moment from "moment";
 
 const get_item_to_sale = asyncHandler(async (req, res) => {
   try {
@@ -401,4 +402,95 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
   }
 });
 
-export { get_item_to_sale, create_sale_order };
+const credit_customers = asyncHandler(async (req, res) => {
+  try {
+    const { fromDate, toDate } = req?.query;
+    console.log("req?.query", req.query);
+
+    if (!fromDate || !toDate)
+      throw new ApiError(404, "Both dates are required !!!");
+    let f_date = moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss"); // 2024-12-24 00:00:00
+    let t_date = moment(toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss");
+    const response = await query(
+      `SELECT * FROM invoice_master WHERE r_amount != total_charges AND c_date BETWEEN ? AND ?`,
+      [f_date, t_date]
+    );
+    if (response.length === 0) throw new ApiError(404, "Data not found !!!");
+    res.status(200).json(new ApiResponse(200, { data: response }));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log("error", error);
+    throw new ApiError(400, "Internal server error !!!");
+  }
+});
+
+const credit_for_clearance = asyncHandler(async (req, res) => {
+  try {
+    const response = await query(
+      `SELECT *,(total_charges - r_amount) AS difference FROM invoice_master WHERE total_charges != r_amount`
+    );
+    if (response.length === 0)
+      throw new ApiError(404, "All parameters are required !!!");
+    res.status(200).json(new ApiResponse(200, { data: response }));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log("error", error);
+    throw new ApiError(500, "Internal server error !!!");
+  }
+});
+
+const create_clearance = asyncHandler(async (req, res) => {
+  try {
+    const { payment_type, remarks, paying, costumer_name, id } = req.body;
+    console.log(req.body);
+    if (![payment_type, paying, id].every(Boolean))
+      throw new ApiError(404, "All parameters are required !!!");
+    const check_valid_payment = await query(
+      `
+          SELECT (total_charges - r_amount) AS difference
+          FROM invoice_master
+          WHERE (total_charges - r_amount) > 0 AND id = ?`,
+      [id]
+    );
+    if (check_valid_payment.length === 0)
+      throw new ApiError(404, "Invalid request as payment is clear already!!!");
+    if (paying > check_valid_payment[0]?.difference) {
+      throw new ApiError(
+        404,
+        "You are paying greater than pending quantity!!!"
+      );
+    }
+    const update_invoice_master = await query(
+      `UPDATE invoice_master SET r_amount = r_amount + ? WHERE id = ?`,
+      [paying, id]
+    );
+    console.log("update_invoice_master", update_invoice_master);
+
+    const create_credit_clearance = await query(
+      `INSERT INTO credit_clearance (payment_type, remarks, paying, costumer_name, invoice_no, c_user) VALUES(?, ?, ?, ?, ?, ?)`,
+      [payment_type, remarks, paying, costumer_name, id, req.user]
+    );
+    console.log("create_credit_clearance", create_credit_clearance);
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, "Credit receive successfully !!!"));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log("error", error);
+    throw new ApiError(500, "Internal server error !!!");
+  }
+});
+export {
+  get_item_to_sale,
+  create_sale_order,
+  credit_customers,
+  credit_for_clearance,
+  create_clearance,
+};
