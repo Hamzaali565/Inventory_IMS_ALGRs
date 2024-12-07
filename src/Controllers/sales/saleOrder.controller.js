@@ -47,8 +47,9 @@ const get_item_to_sale = asyncHandler(async (req, res) => {
 
 const create_sale_order = asyncHandler(async (req, res, next) => {
   try {
-    const { data, totalPrice, totalPurchase } = req.body;
-    if (![data, totalPrice, totalPurchase].every(Boolean))
+    const { data, totalPrice, totalPurchase, r_amount, costumer_name } =
+      req.body;
+    if (![data, totalPrice, totalPurchase, r_amount].every(Boolean))
       throw new ApiError(400, "All parameters are required !!!");
     if (!Array.isArray(data) || data.length === 0)
       throw new ApiError(
@@ -156,8 +157,8 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
     if (dataRecieveFromUser.length === 0 && lp_items.length !== 0) {
       // master updated
       let create_invoice = await query(
-        `INSERT INTO invoice_master(c_user, total_charges, total_expense) VALUES (?, ?, ?)`,
-        [req.user, totalPrice, totalPurchase]
+        `INSERT INTO invoice_master(c_user, total_charges, total_expense, r_amount, costumer_name) VALUES (?, ?, ?, ?, ?)`,
+        [req.user, totalPrice, totalPurchase, r_amount, costumer_name]
       );
       let invoice_no = create_invoice?.insertId;
       // ------
@@ -256,8 +257,8 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
 
       // master updated
       let create_invoice = await query(
-        `INSERT INTO invoice_master(c_user, total_charges, total_expense) VALUES (?, ?, ?)`,
-        [req.user, totalPrice, totalPurchase]
+        `INSERT INTO invoice_master(c_user, total_charges, total_expense, r_amount, costumer_name) VALUES (?, ?, ?, ?, ?)`,
+        [req.user, totalPrice, totalPurchase, r_amount, costumer_name]
       );
 
       let invoice_no = create_invoice?.insertId;

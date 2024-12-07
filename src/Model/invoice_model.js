@@ -3,6 +3,8 @@ CREATE TABLE IF NOT EXISTS invoice_master (
 id INT AUTO_INCREMENT PRIMARY KEY,
 total_charges DECIMAL(30, 2),
 total_expense DECIMAL(30, 2),
+costumer_name VARCHAR(300),
+r_amount DECIMAL(30, 2),
 c_user VARCHAR(300) NOT NULL,
 c_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )

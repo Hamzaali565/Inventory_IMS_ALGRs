@@ -53,14 +53,15 @@ const stock_upload = asyncHandler(async (req, res) => {
       items.p_size_stock,
       items?.unit_id,
       items?.item_unit,
+      items?.grn_no,
     ]);
 
     const placeholders = Array(data.length)
-      .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? ,?)")
+      .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? ,?, ?)")
       .join(", ");
 
     const response = await query(
-      `INSERT INTO stock (item_name, item_id, batch_qty, batch_no, input_type, c_user, location, location_id, p_size_status, p_size_qty, p_size_stock, unit_id, item_unit) 
+      `INSERT INTO stock (item_name, item_id, batch_qty, batch_no, input_type, c_user, location, location_id, p_size_status, p_size_qty, p_size_stock, unit_id, item_unit, grn_no) 
        VALUES ${placeholders}`,
       values
     );
