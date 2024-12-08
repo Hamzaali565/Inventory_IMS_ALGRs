@@ -6,13 +6,21 @@ import moment from "moment";
 
 const get_item_to_sale = asyncHandler(async (req, res) => {
   try {
-    const { scan_code } = req.query;
+    const { scan_code, key } = req.query;
 
     if (!scan_code) throw new ApiError("scan code is required !!!");
-    const item_detail = await query(
-      "SELECT * FROM items WHERE scan_code = ?",
-      scan_code
-    );
+    let item_detail;
+    if (key === "scan_code") {
+      item_detail = await query(
+        "SELECT * FROM items WHERE scan_code = ?",
+        scan_code
+      );
+    } else {
+      item_detail = await query(
+        "SELECT * FROM items WHERE item_id = ?",
+        scan_code
+      );
+    }
 
     if (item_detail?.length === 0)
       throw new ApiError(404, "Item not found !!!");

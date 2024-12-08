@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   createItem,
+  item_name_partial,
   retrieved_item,
   update_item,
 } from "../../../Controllers/inventory/item.controller.js";
@@ -30,6 +31,7 @@ const router = Router();
 //items
 router.route("/item").post(createItem);
 router.route("/item").get(retrieved_item);
+router.route("/item-partial").get(item_name_partial);
 router.route("/item").put(update_item);
 
 //units

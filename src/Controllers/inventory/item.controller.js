@@ -97,6 +97,23 @@ const retrieved_item = asyncHandler(async (req, res) => {
   }
 });
 
+const item_name_partial = asyncHandler(async (req, res) => {
+  try {
+    const { item_name } = req.query;
+    const response = await query(
+      `SELECT item_name, item_id FROM items WHERE item_name LIKE ?`,
+      [`%${item_name}%`]
+    );
+    if (response.length === 0) throw new ApiError(404, "No data found");
+    res.status(200).json(new ApiResponse(200, { data: response }));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(400, "Something went wrong");
+  }
+});
+
 const update_item = asyncHandler(async (req, res) => {
   try {
     const {
@@ -170,4 +187,4 @@ const update_item = asyncHandler(async (req, res) => {
   }
 });
 
-export { createItem, retrieved_item, update_item };
+export { createItem, retrieved_item, update_item, item_name_partial };
