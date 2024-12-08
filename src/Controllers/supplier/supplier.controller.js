@@ -361,6 +361,45 @@ const return_lp_items_to_supplier = asyncHandler(async (req, res) => {
     let itemIds = data.map((items) => items?.item_id);
     let placeholders = itemIds.map(() => "?").join(",");
 
+    const check_current_status = await query(
+      `SELECT *, (d_qty - a_qty) AS remaining_qty 
+       FROM local_purchasing 
+       WHERE completed = false AND d_qty != a_qty AND invoice_no = ?`,
+      [data[0].invoice_no]
+    );
+    console.log("check_current_status", check_current_status);
+    const newData = check_current_status
+      .map((items) => {
+        const find_valid_qty = data.find(
+          (data_item) => data_item?.id === items?.id
+        );
+
+        if (!find_valid_qty) {
+          return null;
+        }
+
+        if (find_valid_qty.a_qty > items.remaining_qty) {
+          throw new Error(
+            `Quantity mismatch: a_qty (${find_valid_qty.a_qty}) exceeds remaining_qty (${items.remaining_qty}) for ID: ${items.id}`
+          );
+        }
+
+        return {
+          ...find_valid_qty,
+          remaining_qty: items.remaining_qty,
+        };
+      })
+      .filter(Boolean);
+
+    console.log("Filtered and Validated Data: ", newData);
+
+    if (newData.length === 0) {
+      throw new ApiError(
+        404,
+        "Transaction Alert, Refresh page and try again !!!"
+      );
+    }
+
     const dataBase = await query(
       `SELECT * FROM stock WHERE item_id IN (${placeholders}) AND batch_status = ?`,
       [...itemIds, true]
