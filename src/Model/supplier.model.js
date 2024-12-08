@@ -27,8 +27,9 @@ u_date TIMESTAMP DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 
 const supplier_payment_model = `
 CREATE TABLE IF NOT EXISTS supplier_payment (
-id INT AUTO_INCREMENT PRIMARY KEY,
-grn_no INT NOT NULL,
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    grn_no INT NOT NULL,
+    invoice_no INT DEFAULT 0,
 supplier_name VARCHAR(300) NOT NULL,
 supplier_id INT NOT NULL,
 payment_type VARCHAR(300) NOT NULL,
@@ -39,4 +40,24 @@ c_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 `;
 
-export { supplier_model, supplier_ledger_model, supplier_payment_model };
+const lp_item_return = `
+CREATE TABLE IF NOT EXISTS lp_item_return (
+id INT AUTO_INCREMENT PRIMARY KEY,
+item_id INT NOT NULL,
+item_name VARCHAR(300) NOT NULL,
+unit_id INT NOT NULL,
+item_unit VARCHAR(300) NOT NULL,
+supplier_name VARCHAR(300) NOT NULL,
+supplier_id INT NOT NULL,
+a_qty DECIMAL(30, 2) NOT NULL,
+c_user VARCHAR(300) NOT NULL,
+c_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+`;
+
+export {
+  supplier_model,
+  supplier_ledger_model,
+  supplier_payment_model,
+  lp_item_return,
+};

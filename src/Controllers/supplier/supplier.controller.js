@@ -116,7 +116,26 @@ const payment_false_grn = asyncHandler(async (req, res) => {
     const response = await query(
       `SELECT *, (payable - payed) AS difference
        FROM supplier_ledger
-       WHERE (payable - payed) > 0 AND completed = ?`,
+       WHERE (payable - payed) > 0 AND completed = ? AND grn_no != 0`,
+      [false]
+    );
+    if (response.length === 0) throw new ApiError(404, "Data not found !!!");
+    res.status(200).json(new ApiResponse(200, { data: response }));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log("Error ", error);
+    throw new ApiError(500, "Internal server error", error);
+  }
+});
+
+const payment_false_invoice = asyncHandler(async (req, res) => {
+  try {
+    const response = await query(
+      `SELECT *, (payable - payed) AS difference
+       FROM supplier_ledger
+       WHERE (payable - payed) > 0 AND completed = ? AND grn_no = 0`,
       [false]
     );
     if (response.length === 0) throw new ApiError(404, "Data not found !!!");
@@ -226,6 +245,310 @@ const create_payment = asyncHandler(async (req, res) => {
   }
 });
 
+const create_payment_invoice = asyncHandler(async (req, res) => {
+  try {
+    const {
+      supplier_id,
+      supplier_name,
+      paying,
+      payment_type,
+      remarks,
+      id,
+      invoice_no,
+    } = req.body;
+    console.log("req.body", req.body);
+
+    if (
+      ![supplier_id, supplier_name, paying, payment_type, id, invoice_no].every(
+        Boolean
+      )
+    )
+      throw new ApiError(404, "All parameters are required !!!");
+    const check_valid_payment = await query(
+      `
+        SELECT (payable - payed) AS difference
+        FROM supplier_ledger
+        WHERE (payable - payed) > 0 AND id = ? AND completed = ?`,
+      [id, false]
+    );
+    if (check_valid_payment.length === 0)
+      throw new ApiError(404, "Invalid request as payment is clear already!!!");
+    if (paying > check_valid_payment[0]?.difference) {
+      throw new ApiError(
+        404,
+        "You are paying greater than pending quantity!!!"
+      );
+    }
+    // create supplier payment table
+    const payment = async () => {
+      try {
+        await query(
+          `INSERT INTO supplier_payment (grn_no ,invoice_no, supplier_name, supplier_id, payment_type, amount, remarks, c_user) 
+           VALUES(?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            0,
+            invoice_no,
+            supplier_name,
+            supplier_id,
+            payment_type,
+            paying,
+            remarks,
+            req?.user,
+          ]
+        );
+        return "Payment table created !!!";
+      } catch (error) {
+        throw new Error("Payment Creation Failed");
+      }
+    };
+
+    // add payed + paying in supplier ledger
+    const update_paying_column = async () => {
+      try {
+        await query(
+          `UPDATE supplier_ledger SET payed = payed + ? WHERE id = ?`,
+          [paying, id]
+        );
+        return "Paying column updated !!!";
+      } catch (error) {
+        throw new Error("Paying column update failed !!!");
+      }
+    };
+
+    await Promise.all([payment(), update_paying_column()]).catch((error) => {
+      throw new Error("Promise failed ", error);
+    });
+
+    // check if payed payment === paying  set completed to true
+    const check_complete_payment = await query(
+      `SELECT * from supplier_ledger WHERE payable = payed AND id = ?`,
+      [id]
+    );
+    if (check_complete_payment.length > 0) {
+      await query(`UPDATE supplier_ledger SET completed = true WHERE id = ?`, [
+        id,
+      ]);
+      res.status(200).json(new ApiResponse(200, "Payment completed !!!"));
+      return;
+    } else {
+      res
+        .status(200)
+        .json(new ApiResponse(200, "Response without payment complete"));
+      return;
+    }
+  } catch (error) {
+    if (error instanceof ApiError) {
+      console.log(error);
+
+      throw error;
+    }
+    console.log(error);
+    throw new ApiError(500, "Internal server error !!!");
+  }
+});
+
+const return_lp_items_to_supplier = asyncHandler(async (req, res) => {
+  try {
+    const { data, supplier_name, supplier_id } = req.body;
+    if (
+      !supplier_name ||
+      !supplier_id ||
+      !data ||
+      !Array.isArray(data) ||
+      data.length === 0
+    )
+      throw new ApiError(404, "All parameters are required !!!");
+    let itemIds = data.map((items) => items?.item_id);
+    let placeholders = itemIds.map(() => "?").join(",");
+
+    const dataBase = await query(
+      `SELECT * FROM stock WHERE item_id IN (${placeholders}) AND batch_status = ?`,
+      [...itemIds, true]
+    );
+    if (dataBase.length === 0) throw new ApiError(404, "No Stock Found !!!");
+    let dataRecieveFromUser = data;
+    const updateStock = (dataBase, dataRecieveFromUser) => {
+      let updatedDataBase = [...dataBase]; // Clone the dataBase array
+      let originalStockData = []; // To keep track of the original stock before modification
+
+      // Save the original stock data before reducing
+      updatedDataBase.forEach((dbItem) => {
+        originalStockData.push({
+          item_id: dbItem.item_id,
+          batch_no: dbItem.batch_no,
+          p_size_stock: dbItem.p_size_stock, // Store original stock
+        });
+      });
+
+      // Validate if the requested d_qty exceeds total available stock
+      dataRecieveFromUser.forEach((userItem) => {
+        let totalStockAvailable = updatedDataBase
+          .filter((dbItem) => dbItem.item_id === userItem.item_id)
+          .reduce((acc, dbItem) => acc + dbItem.p_size_stock, 0);
+
+        if (userItem.a_qty > totalStockAvailable) {
+          throw new Error(
+            `Cannot reduce ${userItem.a_qty} items. Only ${totalStockAvailable} items are available.`
+          );
+        }
+      });
+
+      // Iterate over each item in dataRecieveFromUser to reduce stock
+      dataRecieveFromUser.forEach((userItem) => {
+        let remainingStockToReduce = userItem.a_qty; // Use d_qty instead of p_size_stock
+
+        // Iterate over dataBase and reduce stock, irrespective of batch_no
+        updatedDataBase = updatedDataBase.map((dbItem) => {
+          if (
+            dbItem.item_id === userItem.item_id &&
+            remainingStockToReduce > 0
+          ) {
+            // If the batch has enough stock to reduce
+            if (remainingStockToReduce >= dbItem.p_size_stock) {
+              remainingStockToReduce -= dbItem.p_size_stock;
+              dbItem.p_size_stock = 0; // All stock from this batch is reduced
+            } else {
+              // If the batch has less stock than needed to reduce, reduce it partially
+              dbItem.p_size_stock -= remainingStockToReduce;
+              remainingStockToReduce = 0; // No more stock needs to be reduced
+            }
+          }
+          return dbItem;
+        });
+      });
+
+      // After updating the stock, calculate the issued_qty
+      updatedDataBase = updatedDataBase.map((dbItem) => {
+        // Find the corresponding original stock data
+        const originalItem = originalStockData.find(
+          (item) =>
+            item.item_id === dbItem.item_id && item.batch_no === dbItem.batch_no
+        );
+
+        // If original stock data is found, calculate the issued_qty
+        if (originalItem) {
+          const issuedQty = originalItem.p_size_stock - dbItem.p_size_stock;
+          return { ...dbItem, issued_qty: issuedQty }; // Add the issued_qty dynamically
+        }
+        return dbItem;
+      });
+
+      // Filter affected batches (issued_qty > 0)
+      const affectedBatches = updatedDataBase.filter(
+        (dbItem) => dbItem.issued_qty > 0
+      );
+
+      return affectedBatches;
+    };
+
+    let updatedDataBase = updateStock(dataBase, dataRecieveFromUser);
+
+    const update_stock_table = async () => {
+      try {
+        const promises = updatedDataBase.map((items) =>
+          query(
+            `UPDATE stock SET p_size_stock = p_size_stock - ? WHERE id = ?`,
+            [items?.issued_qty, items?.id]
+          )
+        );
+        await Promise.all(promises);
+        return "STOCK UPDATED COMPLETED !!!";
+      } catch (error) {
+        throw new Error("Failed to update stock table: " + error.message);
+      }
+    };
+
+    const update_lp_completion = async () => {
+      try {
+        const promises = data.map((items) =>
+          query(
+            `UPDATE local_purchasing SET a_qty = a_qty + ? WHERE item_id = ? AND id = ?`,
+            [items?.a_qty, items?.item_id, items?.id]
+          )
+        );
+        await Promise.all(promises);
+        return "Adjusted items added in local_puchasing !!!";
+      } catch (error) {
+        throw new Error("Failed to update local_purchasing: ", error.message);
+      }
+    };
+
+    const detail_return_to_supplier = async () => {
+      let formattedData = data.map((item) => ({
+        ...item,
+        supplier_name,
+        supplier_id,
+      }));
+
+      const placeholders = Array(formattedData.length)
+        .fill("(?, ?, ?, ?, ?, ?, ?, ?)")
+        .join(", ");
+
+      formattedData = formattedData.flatMap((items) => [
+        items.item_name,
+        items.item_id,
+        items?.item_unit,
+        items?.unit_id,
+        items.a_qty,
+        items?.supplier_name,
+        items?.supplier_id,
+        req.user,
+      ]);
+      await query(
+        `INSERT INTO lp_item_return(item_name, item_id, item_unit, unit_id, a_qty, supplier_name, supplier_id, c_user) VALUES ${placeholders}`,
+        formattedData
+      );
+      return "LP item return completed !!!";
+    };
+    await Promise.all([
+      update_stock_table(),
+      update_lp_completion(),
+      detail_return_to_supplier(),
+    ]).catch((error) => {
+      throw new Error(`promise failed with error ${error}`);
+    });
+
+    const update_stock_batch_status = async () => {
+      try {
+        console.log("updatedDataBase", updatedDataBase);
+        const promises = updatedDataBase.map((items) =>
+          query(
+            `UPDATE stock SET batch_status = ? WHERE item_id = ? AND p_size_stock = ?`,
+            [false, items?.item_id, 0]
+          )
+        );
+        await Promise.all(promises);
+        console.log("promises", promises);
+        return "batch status !!!";
+      } catch (error) {
+        throw new Error("Failed to update GRN status: " + error.message);
+      }
+    };
+
+    let update_completion = async () => {
+      await query(
+        `UPDATE local_purchasing SET completed = true WHERE id = ? AND d_qty = a_qty`,
+        [data[0]?.id]
+      );
+      return "Completed true";
+    };
+
+    await Promise.all([update_stock_batch_status(), update_completion()])
+      .then(() => {
+        res.status(200).json(new ApiResponse(200, "Success"));
+      })
+      .catch((error) => {
+        throw new Error(`Failed promise`);
+      });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log(error);
+    throw new ApiError(500, `Internal server error !!! ${error.message}`);
+  }
+});
+
 export {
   create_supplier,
   retrieved_supplier,
@@ -233,4 +556,7 @@ export {
   supplier_ledger,
   payment_false_grn,
   create_payment,
+  payment_false_invoice,
+  create_payment_invoice,
+  return_lp_items_to_supplier,
 };

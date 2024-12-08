@@ -491,7 +491,7 @@ const create_clearance = asyncHandler(async (req, res) => {
 const get_lp_invoices = asyncHandler(async (req, res) => {
   try {
     const response = await query(
-      `SELECT invoice_no, SUM(d_qty) AS t_qty
+      `SELECT invoice_no, SUM(d_qty - a_qty) AS t_qty
        FROM local_purchasing
        WHERE completed = false
        GROUP BY invoice_no`

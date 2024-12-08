@@ -14,6 +14,7 @@ import {
   stock_taking_model,
 } from "../Model/stockTaking.model.js";
 import {
+  lp_item_return,
   supplier_ledger_model,
   supplier_model,
   supplier_payment_model,
@@ -42,6 +43,7 @@ const tablesSetup = async () => {
     await query(user_model);
     await query(supplier_payment_model);
     await query(invoice_clearance);
+    await query(lp_item_return);
     console.log("table created successfully !!!");
   } catch (error) {
     console.log(`Table creration failed with ${error}`);
