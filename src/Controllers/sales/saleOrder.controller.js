@@ -487,10 +487,65 @@ const create_clearance = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Internal server error !!!");
   }
 });
+
+const get_lp_invoices = asyncHandler(async (req, res) => {
+  try {
+    const response = await query(
+      `SELECT invoice_no, SUM(d_qty) AS t_qty
+       FROM local_purchasing
+       WHERE completed = false
+       GROUP BY invoice_no`
+    );
+
+    if (response.length === 0) throw new ApiError(404, "Data not found !!!");
+    let invoices = response.map((items) => items?.invoice_no);
+    let placeholders = invoices.map(() => "?").join(",");
+    let constumer_info = await query(
+      `SELECT costumer_name from invoice_master WHERE id IN (${placeholders})`,
+      invoices
+    );
+    let result = response.map((item) => {
+      let customer = constumer_info.find((im) => im.id === item.invoice_no);
+      return {
+        ...item,
+        customer_name: customer ? customer.costumer_name : "No name",
+      };
+    });
+
+    res.status(200).json(new ApiResponse(200, { data: result }));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log("error", error);
+    throw new ApiError(500, "Internal server error !!!");
+  }
+});
+
+const get_lp_detail = asyncHandler(async (req, res) => {
+  try {
+    const { invoice_no } = req.query;
+    const response = await query(
+      `SELECT * FROM local_purchasing WHERE invoice_no = ? AND completed = false`,
+      [invoice_no]
+    );
+    if (response.length === 0) {
+      throw new ApiError(404, "No data found");
+    }
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log("error", error);
+    throw new ApiError(500, "Internal server error !!!");
+  }
+});
 export {
   get_item_to_sale,
   create_sale_order,
   credit_customers,
   credit_for_clearance,
   create_clearance,
+  get_lp_invoices,
+  get_lp_detail,
 };

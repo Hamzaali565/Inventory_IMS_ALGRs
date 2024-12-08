@@ -5,6 +5,8 @@ import {
   credit_customers,
   credit_for_clearance,
   get_item_to_sale,
+  get_lp_detail,
+  get_lp_invoices,
 } from "../../../Controllers/sales/saleOrder.controller.js";
 
 const router = Router();
@@ -14,5 +16,7 @@ router.route("/sales").post(create_sale_order);
 router.route("/credit-costumers").get(credit_customers);
 router.route("/credit_for_clearance").get(credit_for_clearance);
 router.route("/create_clearance").post(create_clearance);
+router.route("/lp-invoices").get(get_lp_invoices);
+router.route("/lp-detail").get(get_lp_detail);
 
 export default router;
