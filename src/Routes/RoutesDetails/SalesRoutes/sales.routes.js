@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   create_clearance,
   create_sale_order,
+  create_supp_ledger_of_lp,
   credit_customers,
   credit_for_clearance,
   get_item_to_sale,
@@ -18,5 +19,6 @@ router.route("/credit_for_clearance").get(credit_for_clearance);
 router.route("/create_clearance").post(create_clearance);
 router.route("/lp-invoices").get(get_lp_invoices);
 router.route("/lp-detail").get(get_lp_detail);
+router.route("/create_supp_ledger_of_lp").post(create_supp_ledger_of_lp);
 
 export default router;

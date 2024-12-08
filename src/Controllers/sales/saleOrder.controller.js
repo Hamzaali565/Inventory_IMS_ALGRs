@@ -525,6 +525,7 @@ const get_lp_invoices = asyncHandler(async (req, res) => {
 const get_lp_detail = asyncHandler(async (req, res) => {
   try {
     const { invoice_no } = req.query;
+
     const response = await query(
       `SELECT * FROM local_purchasing WHERE invoice_no = ? AND completed = false`,
       [invoice_no]
@@ -532,6 +533,7 @@ const get_lp_detail = asyncHandler(async (req, res) => {
     if (response.length === 0) {
       throw new ApiError(404, "No data found");
     }
+    res.status(200).json(new ApiResponse(200, { data: response }));
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
@@ -540,6 +542,58 @@ const get_lp_detail = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Internal server error !!!");
   }
 });
+
+const create_supp_ledger_of_lp = asyncHandler(async (req, res) => {
+  try {
+    const { supplier_name, supplier_id, payable, data } = req.body;
+    console.log(req.body);
+
+    if (![supplier_name, supplier_id, payable].every(Boolean))
+      throw new ApiError(404, "All parameters are required !!!");
+    if (!data || !Array.isArray(data) || data.length === 0)
+      throw new ApiError(
+        404,
+        "Data is a required field, it should be an array and it should have length of atleast 1."
+      );
+    const update_lp_completion = async () => {
+      try {
+        const promises = data.map((items) =>
+          query(
+            `UPDATE local_purchasing SET completed = true WHERE item_id = ? AND invoice_no = ?`,
+            [items?.item_id, items?.invoice_no]
+          )
+        );
+        await Promise.all(promises);
+        return "LP COMPLETED !!!";
+      } catch (error) {
+        throw new Error("Failed to update GRN status: " + error.message);
+      }
+    };
+
+    const create_s_ledger = async () => {
+      await query(
+        `INSERT INTO supplier_ledger(grn_no, invoice_no, supplier_name, supplier_id, payable, c_user) VALUES (?, ?, ?, ?, ?, ?)`,
+        [0, data[0].invoice_no, supplier_name, supplier_id, payable, req.user]
+      );
+    };
+
+    await Promise.all([update_lp_completion(), create_s_ledger()])
+      .then(() => {
+        res.status(200).json(new ApiResponse(200, "Query completetd"));
+      })
+      .catch((error) => {
+        console.log("promise error", error);
+        throw new Error("Promise resolve failed !!!");
+      });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log(error);
+    throw new ApiError(500, "Internal server error !!!");
+  }
+});
+
 export {
   get_item_to_sale,
   create_sale_order,
@@ -548,4 +602,5 @@ export {
   create_clearance,
   get_lp_invoices,
   get_lp_detail,
+  create_supp_ledger_of_lp,
 };
