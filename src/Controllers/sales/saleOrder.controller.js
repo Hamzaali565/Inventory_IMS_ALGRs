@@ -74,6 +74,13 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
     );
     console.log("dataRecieveFromUser", dataRecieveFromUser);
 
+    let iFormattedData = data.map((items) => ({
+      item_id: items.item_id,
+      item_name: items?.item_name,
+      d_qty: items?.d_qty,
+    }));
+    console.log("iFormattedData", iFormattedData);
+
     let itemIds = data.map((items) => items?.item_id);
 
     let placeholders = itemIds.map(() => "?").join(",");
@@ -82,7 +89,8 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
       `SELECT * FROM stock WHERE item_id IN (${placeholders}) AND batch_status = ?`,
       [...itemIds, true]
     );
-    // console.log(dataBase);
+    console.log("dataBase");
+
     const updateStock = (dataBase, dataRecieveFromUser) => {
       let updatedDataBase = [...dataBase]; // Clone the dataBase array
       let originalStockData = []; // To keep track of the original stock before modification
@@ -159,7 +167,7 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
 
     let updatedDataBase;
     if (dataRecieveFromUser.length !== 0) {
-      updatedDataBase = updateStock(dataBase, dataRecieveFromUser);
+      updatedDataBase = updateStock(dataBase, iFormattedData);
     }
     console.log("updatedDataBase", updatedDataBase);
 
