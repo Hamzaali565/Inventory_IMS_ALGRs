@@ -407,17 +407,8 @@ const return_lp_items_to_supplier = asyncHandler(async (req, res) => {
     if (dataBase.length === 0) throw new ApiError(404, "No Stock Found !!!");
     let dataRecieveFromUser = data;
     const updateStock = (dataBase, dataRecieveFromUser) => {
-      let updatedDataBase = [...dataBase]; // Clone the dataBase array
-      let originalStockData = []; // To keep track of the original stock before modification
-
-      // Save the original stock data before reducing
-      updatedDataBase.forEach((dbItem) => {
-        originalStockData.push({
-          item_id: dbItem.item_id,
-          batch_no: dbItem.batch_no,
-          p_size_stock: dbItem.p_size_stock, // Store original stock
-        });
-      });
+      let updatedDataBase = [...dataBase]; // Clone the database
+      let originalStockData = dataBase.map((dbItem) => ({ ...dbItem })); // Save original stock data
 
       // Validate if the requested d_qty exceeds total available stock
       dataRecieveFromUser.forEach((userItem) => {
@@ -432,42 +423,34 @@ const return_lp_items_to_supplier = asyncHandler(async (req, res) => {
         }
       });
 
-      // Iterate over each item in dataRecieveFromUser to reduce stock
+      // Reduce stock for each item in dataRecieveFromUser
       dataRecieveFromUser.forEach((userItem) => {
-        let remainingStockToReduce = userItem.a_qty; // Use d_qty instead of p_size_stock
+        let remainingStockToReduce = userItem.a_qty;
 
-        // Iterate over dataBase and reduce stock, irrespective of batch_no
-        updatedDataBase = updatedDataBase.map((dbItem) => {
+        // Iterate over batches, reduce stock while keeping it non-negative
+        updatedDataBase = updatedDataBase.map((dbItem, index) => {
           if (
             dbItem.item_id === userItem.item_id &&
             remainingStockToReduce > 0
           ) {
-            // If the batch has enough stock to reduce
-            if (remainingStockToReduce >= dbItem.p_size_stock) {
-              remainingStockToReduce -= dbItem.p_size_stock;
-              dbItem.p_size_stock = 0; // All stock from this batch is reduced
-            } else {
-              // If the batch has less stock than needed to reduce, reduce it partially
-              dbItem.p_size_stock -= remainingStockToReduce;
-              remainingStockToReduce = 0; // No more stock needs to be reduced
-            }
+            const stockToReduce = Math.min(
+              dbItem.p_size_stock,
+              remainingStockToReduce
+            );
+            dbItem.p_size_stock -= stockToReduce;
+            remainingStockToReduce -= stockToReduce;
           }
           return dbItem;
         });
       });
 
-      // After updating the stock, calculate the issued_qty
-      updatedDataBase = updatedDataBase.map((dbItem) => {
-        // Find the corresponding original stock data
-        const originalItem = originalStockData.find(
-          (item) =>
-            item.item_id === dbItem.item_id && item.batch_no === dbItem.batch_no
-        );
+      // Calculate issued_qty for all batches
+      updatedDataBase = updatedDataBase.map((dbItem, index) => {
+        const originalItem = originalStockData[index]; // Use index to ensure correct mapping
 
-        // If original stock data is found, calculate the issued_qty
         if (originalItem) {
           const issuedQty = originalItem.p_size_stock - dbItem.p_size_stock;
-          return { ...dbItem, issued_qty: issuedQty }; // Add the issued_qty dynamically
+          return { ...dbItem, issued_qty: issuedQty }; // Include issued_qty for all
         }
         return dbItem;
       });
