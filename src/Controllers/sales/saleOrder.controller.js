@@ -602,6 +602,135 @@ const create_supp_ledger_of_lp = asyncHandler(async (req, res) => {
   }
 });
 
+const stock_recieve_against_refund = asyncHandler(async (req, res) => {
+  try {
+    const { data, refund_amount, total_purchase } = req.body;
+
+    if (
+      !data ||
+      !Array.isArray(data) ||
+      data.length === 0 ||
+      !refund_amount ||
+      !total_purchase
+    )
+      throw new ApiError(
+        400,
+        "Data is required, data should be array, data should have length !!"
+      );
+    data.map((item, index) => {
+      const {
+        item_name,
+        item_id,
+        batch_no,
+        batch_qty,
+        input_type,
+        location,
+        location_id,
+      } = item;
+      if (
+        ![
+          item_name,
+          item_id,
+          batch_no,
+          batch_qty,
+          input_type,
+          location,
+          location_id,
+        ].every(Boolean)
+      )
+        throw new ApiError(400, `Some Data missing at line no ${index + 1}`);
+    });
+
+    const values = data.flatMap((items) => [
+      items.item_name,
+      items.item_id,
+      items.batch_qty,
+      items.batch_no,
+      items.input_type,
+      req.user,
+      items.location,
+      items.location_id,
+      items.p_size_status,
+      items.p_size_qty,
+      items.p_size_stock,
+      items?.unit_id,
+      items?.item_unit,
+      items?.grn_no,
+    ]);
+
+    const placeholders = Array(data.length)
+      .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? ,?, ?)")
+      .join(", ");
+
+    let response = await query(
+      `INSERT INTO stock (item_name, item_id, batch_qty, batch_no, input_type, c_user, location, location_id, p_size_status, p_size_qty, p_size_stock, unit_id, item_unit, grn_no) 
+       VALUES ${placeholders}`,
+      values
+    );
+
+    console.log("response", response);
+
+    let master_refund = await query(
+      `INSERT INTO master_refund(refund_amount, total_purchase, c_user) VALUES(?, ?, ?)`,
+      [refund_amount, total_purchase, req.user]
+    );
+
+    master_refund = master_refund?.insertId;
+
+    const formattedData = data.map((items) => ({
+      item_name: items.item_name,
+      item_id: items?.item_id,
+      item_unit: items?.item_unit,
+      unit_id: items?.unit_id,
+      p_size_status: items?.p_size_status,
+      p_size_qty: items?.p_size_qty,
+      p_size_stock: items?.p_size_stock,
+      c_user: req?.user,
+      refund_no: master_refund,
+      s_price:
+        items?.p_size_status === 1 ? items?.s_price_per_size : items?.s_price,
+      p_price:
+        items?.p_size_status === 1 ? items?.p_price_per_size : items?.p_price,
+      qty: items?.d_qty,
+    }));
+
+    const values_of_refund_child = formattedData.flatMap((items) => [
+      items.item_name,
+      items.item_id,
+      items?.unit_id,
+      items?.item_unit,
+      items.p_size_status,
+      items.p_size_qty,
+      items.p_size_stock,
+      items?.c_user,
+      items?.refund_no,
+      items?.s_price,
+      items?.p_price,
+      items?.qty,
+    ]);
+
+    const placeholders_refund_child = Array(formattedData.length)
+      .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .join(", ");
+
+    const refund_child = await query(
+      `INSERT INTO child_refund (item_name, item_id, unit_id, item_unit, p_size_status, p_size_qty,
+       p_size_stock, c_user, refund_no, s_price, p_price, qty ) 
+       VALUES ${placeholders_refund_child}`,
+      values_of_refund_child
+    );
+
+    res.status(200).json(new ApiResponse(200, "Stock uploaded !!!"));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log(error);
+
+    throw new ApiError(500, "Internal server error !!!");
+  }
+});
+
 export {
   get_item_to_sale,
   create_sale_order,
@@ -611,4 +740,5 @@ export {
   get_lp_invoices,
   get_lp_detail,
   create_supp_ledger_of_lp,
+  stock_recieve_against_refund,
 };

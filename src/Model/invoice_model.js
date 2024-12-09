@@ -37,4 +37,37 @@ c_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 `;
 
-export { master_invoice, child_invoice, invoice_clearance };
+const master_refund = `
+CREATE TABLE IF NOT EXISTS master_refund(
+id INT AUTO_INCREMENT PRIMARY KEY,
+refund_amount DECIMAL(30, 2) NOT NULL, 
+total_purchase DECIMAL(30, 2) NOT NULL,
+c_user VARCHAR(300) NOT NULL,
+c_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+`;
+
+const child_refund = `
+CREATE TABLE IF NOT EXISTS child_refund(
+item_name VARCHAR(300) NOT NULL, 
+item_id INT NOT NULL, 
+unit_id INT NOT NULL, 
+item_unit VARCHAR(300) NOT NULL, 
+p_size_status BOOLEAN NOT NULL, 
+p_size_qty DECIMAL(30, 2) NOT NULL,
+p_size_stock DECIMAL(30, 2) NOT NULL, 
+refund_no INT NOT NULL, 
+s_price DECIMAL(30, 2) NOT NULL, 
+p_price DECIMAL(30, 2) NOT NULL, 
+qty DECIMAL(30, 2) NOT NULL,
+c_user VARCHAR(300) NOT NULL
+)
+`;
+
+export {
+  master_invoice,
+  child_invoice,
+  invoice_clearance,
+  master_refund,
+  child_refund,
+};
