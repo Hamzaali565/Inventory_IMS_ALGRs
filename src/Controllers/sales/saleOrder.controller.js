@@ -722,6 +722,43 @@ const stock_recieve_against_refund = asyncHandler(async (req, res) => {
   }
 });
 
+const customers_name = asyncHandler(async (req, res) => {
+  try {
+    const { costumer_name } = req.query;
+    if (!costumer_name)
+      throw new ApiError(404, "Customer name is required !!!");
+    const response = await query(
+      "SELECT DISTINCT costumer_name FROM invoice_master WHERE costumer_name LIKE ?",
+      [`%${costumer_name}%`]
+    );
+    if (response.length === 0) {
+      throw new ApiError(404, "data not found !!!");
+    }
+    res.status(200).json(new ApiResponse(200, { data: response }));
+  } catch (error) {
+    throw new ApiError(500, "Internal server error !!!");
+  }
+});
+
+const previous_record = asyncHandler(async (req, res) => {
+  try {
+    const { name } = req.query;
+    if (!name) throw new ApiError(404, "Name is required !!!");
+    const response = await query(
+      "SELECT * FROM invoice_master WHERE costumer_name = ? AND total_charges != r_amount",
+      [name]
+    );
+    console.log(response);
+
+    if (response.length === 0) throw new ApiError(404, "Data not found !!!");
+    res.status(200).json(new ApiResponse(200, { data: response }));
+  } catch (error) {
+    console.log(error);
+
+    throw new ApiError(500, "Internal server error !!!");
+  }
+});
+
 export {
   get_item_to_sale,
   create_sale_order,
@@ -732,4 +769,6 @@ export {
   get_lp_detail,
   create_supp_ledger_of_lp,
   stock_recieve_against_refund,
+  customers_name,
+  previous_record,
 };
