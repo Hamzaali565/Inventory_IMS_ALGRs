@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  create_multiple_items,
   createItem,
   item_name_partial,
   retrieved_item,
@@ -33,6 +34,7 @@ router.route("/item").post(createItem);
 router.route("/item").get(retrieved_item);
 router.route("/item-partial").get(item_name_partial);
 router.route("/item").put(update_item);
+router.route("/upload-excel").post(create_multiple_items);
 
 //units
 router.route("/unit").post(create_unit);

@@ -76,6 +76,87 @@ const createItem = asyncHandler(async (req, res, next) => {
   }
 });
 
+const create_multiple_items = async (req, res) => {
+  try {
+    const { data } = req.body;
+    if (!data || !Array.isArray(data) || data.length === 0)
+      throw new ApiError(
+        404,
+        "Data is a required field, it should be an array and it should have atleast one row !!!"
+      );
+    console.log("data", data);
+
+    // Validate each item's fields
+    data.forEach((items, index) => {
+      const {
+        item_name,
+        unit_id,
+        item_unit,
+        p_price,
+        s_price,
+        category,
+        category_id,
+        scan_code,
+      } = items;
+
+      // Check for missing fields
+      const missingFields = [];
+      if (!item_name) missingFields.push("item_name");
+      if (!unit_id) missingFields.push("unit_id");
+      if (!item_unit) missingFields.push("item_unit");
+      if (!p_price) missingFields.push("p_price");
+      if (!s_price) missingFields.push("s_price");
+      if (!category) missingFields.push("category");
+      if (!category_id) missingFields.push("category_id");
+      if (!scan_code) missingFields.push("scan_code");
+
+      // If any fields are missing, throw a specific error
+      if (missingFields.length > 0) {
+        throw new ApiError(
+          400,
+          `Missing fields at line ${index + 1}: ${missingFields.join(", ")}`
+        );
+      }
+    });
+    const values = data.flatMap((items) => [
+      items.item_name,
+      items?.unit_id,
+      items?.item_unit,
+      items?.s_price,
+      items?.p_price,
+      items?.category,
+      items?.category_id,
+      items.p_size_status,
+      items.p_size_qty,
+      items?.p_price_per_size,
+      items?.s_price_per_size,
+      items.scan_code,
+      req.user,
+    ]);
+
+    const placeholders = Array(data.length)
+      .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? ,?)")
+      .join(", ");
+
+    const response = await query(
+      `INSERT INTO items (item_name, unit_id, item_unit, s_price, p_price, 
+       category, category_id, p_size_status, p_size_qty, p_price_per_size, s_price_per_size, scan_code, c_user) 
+       VALUES ${placeholders}`,
+      values
+    );
+    res
+      .status(200)
+      .json(new ApiResponse(200, "Excel Uploaded successfully !!!"));
+  } catch (error) {
+    console.log(error);
+    if (error instanceof ApiError) {
+      res.status(error.statusCode).json({ error: error.message });
+      return;
+    }
+    throw new ApiError(500, "Internal server error !!!");
+  }
+};
+
 const retrieved_item = asyncHandler(async (req, res) => {
   try {
     const response = await query(`SELECT * FROM items`);
@@ -187,4 +268,10 @@ const update_item = asyncHandler(async (req, res) => {
   }
 });
 
-export { createItem, retrieved_item, update_item, item_name_partial };
+export {
+  createItem,
+  retrieved_item,
+  update_item,
+  item_name_partial,
+  create_multiple_items,
+};
