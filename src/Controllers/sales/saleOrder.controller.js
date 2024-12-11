@@ -58,7 +58,7 @@ const create_sale_order = asyncHandler(async (req, res, next) => {
   try {
     const { data, totalPrice, totalPurchase, r_amount, costumer_name } =
       req.body;
-    if (![data, totalPrice, totalPurchase, r_amount].every(Boolean))
+    if (![data, totalPrice, totalPurchase].every(Boolean))
       throw new ApiError(400, "All parameters are required !!!");
     if (!Array.isArray(data) || data.length === 0)
       throw new ApiError(

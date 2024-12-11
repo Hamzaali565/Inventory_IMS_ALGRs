@@ -317,4 +317,204 @@ const create_grn = asyncHandler(async (req, res, next) => {
   }
 });
 
-export { create_grn };
+const direct_grn = asyncHandler(async (req, res) => {
+  try {
+    const {
+      grn_date,
+      bill_no,
+      remarks,
+      location,
+      supplier_name,
+      supplier_id,
+      location_id,
+      grnDetails,
+    } = req.body;
+
+    let data = grnDetails;
+
+    data = data.map((items) => {
+      if (items?.p_size_stock === 0) {
+        return {
+          ...items,
+          p_size_stock: +(items?.batch_qty + items?.b_qty),
+          r_qty: Number(items?.r_qty + items?.b_qty),
+          t_qty: Number(items?.r_qty + items?.b_qty),
+        };
+      }
+      return items;
+    });
+    console.log("data", data);
+
+    if (!grn_date) throw new ApiError(400, "All parameters are required !!!");
+
+    if (!data || !Array.isArray(data) || data.length === 0)
+      throw new ApiError(
+        400,
+        "Data is a required field, data should be array, data should contain atleast one object !!!"
+      );
+
+    data.map((items, index) => {
+      const {
+        item_id,
+        item_name,
+        unit_id,
+        item_unit,
+        t_qty,
+        r_qty,
+        charges,
+        amount,
+        p_size_status,
+        p_size_qty,
+        batch_no,
+        batch_qty,
+        p_size_stock,
+      } = items;
+
+      if (
+        ![
+          item_id,
+          item_name,
+          unit_id,
+          item_unit,
+          t_qty,
+          r_qty,
+          charges,
+          amount,
+          batch_no,
+          batch_qty,
+        ].every(Boolean)
+      )
+        throw new ApiError(400, `Sone data miss at line no ${index + 1}`);
+    });
+    let master_grn = await query(
+      `INSERT INTO grn_master(grn_date, bill_no, remarks, c_user, location, location_id, supplier_name, supplier_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        grn_date,
+        bill_no,
+        remarks,
+        req?.user,
+        location,
+        location_id,
+        supplier_name,
+        supplier_id,
+      ]
+    );
+    let grn_no = master_grn.insertId;
+
+    let dataRes = data.map((items) => ({
+      ...items,
+      grn_no,
+      location,
+      location_id,
+    }));
+
+    const values = dataRes.flatMap((items) => [
+      items?.grn_no,
+      items?.item_id,
+      items?.item_name,
+      items?.unit_id,
+      items?.item_unit,
+      items?.r_qty,
+      items?.r_qty,
+      0,
+      items?.charges,
+      items?.amount,
+      items?.p_size_status,
+      items?.p_size_qty,
+      0,
+      items?.batch_no,
+      1,
+    ]);
+    const placeholders = Array(dataRes.length)
+      .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .join(", ");
+
+    // get po_child of grn_status false an push in authentic_po
+
+    const grn_child = new Promise(async (resolve, reject) => {
+      try {
+        await query(
+          `INSERT INTO grn (grn_no, item_id, item_name, unit_id, item_unit, t_qty,
+          r_qty, p_qty, charges, amount, p_size_status, p_size_qty, po_no, batch_no, grn_status) 
+          VALUES ${placeholders}`,
+          values
+        );
+        resolve("Response Created");
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    const stock_values = dataRes.flatMap((items) => [
+      items.item_name,
+      items.item_id,
+      items.batch_qty,
+      items.batch_no,
+      "Direct Good Recipt Note",
+      req.user,
+      items.location,
+      items.location_id,
+      items.p_size_status,
+      items.p_size_qty,
+      items.p_size_stock,
+      items.item_unit,
+      items.unit_id,
+      grn_no,
+    ]);
+
+    const stock_placeholder = Array(dataRes.length)
+      .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .join(", ");
+
+    const update_stock = new Promise(async (resolve, reject) => {
+      try {
+        await query(
+          `INSERT INTO stock (item_name, item_id, batch_qty, batch_no, input_type,
+                 c_user, location, location_id, p_size_status, p_size_qty, p_size_stock,
+                 item_unit, unit_id, grn_no)
+                 VALUES ${stock_placeholder}`,
+          stock_values
+        );
+        resolve("Stock added successfully !!!");
+      } catch (error) {
+        reject("Insert stock failed", error);
+      }
+    });
+
+    const createSupplierLedger = async () => {
+      const find_last_grn = await query(
+        `SELECT * FROM grn 
+         WHERE grn_no = ?)`,
+        [grn_no]
+      );
+
+      const payable = find_last_grn.reduce(
+        (sum, item) => sum + (item?.amount || 0),
+        0
+      );
+
+      await query(
+        `INSERT INTO supplier_ledger (grn_no, supplier_name, supplier_id, payable, c_user) VALUES (?, ?, ?, ?, ?)`,
+        [grn_no, supplier_name, supplier_id, payable, req.user]
+      );
+      return "Supplier Ledger Created";
+    };
+
+    await Promise.all([grn_child(), update_stock(), createSupplierLedger()])
+      .then(() => {
+        res.status(200).json(new ApiResponse(200, "Direct grn created !!!"));
+      })
+      .catch((error) => {
+        throw new Error("Promise Failed");
+      });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log("error", error);
+    throw new ApiError(500, "Internal server error");
+  }
+});
+
+export { create_grn, direct_grn };
