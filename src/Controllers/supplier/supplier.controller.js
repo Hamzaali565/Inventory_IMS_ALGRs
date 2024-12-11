@@ -247,7 +247,7 @@ const create_payment = asyncHandler(async (req, res) => {
 
 const create_payment_invoice = asyncHandler(async (req, res) => {
   try {
-    const { supplier_id, supplier_name, paying, invoice_no } = req.body;
+    const { supplier_id, supplier_name, paying, invoice_no, data } = req.body;
     console.log("req.body", req.body);
 
     if (![supplier_id, supplier_name, paying, invoice_no].every(Boolean))
@@ -290,6 +290,21 @@ const create_payment_invoice = asyncHandler(async (req, res) => {
       }
     };
 
+    const update_lp_completion = async () => {
+      try {
+        const promises = data.map((items) =>
+          query(
+            `UPDATE local_purchasing SET completed = true WHERE item_id = ? AND invoice_no = ?`,
+            [items?.item_id, items?.invoice_no]
+          )
+        );
+        await Promise.all(promises);
+        return "LP COMPLETED !!!";
+      } catch (error) {
+        throw new Error("Failed to update GRN status: " + error.message);
+      }
+    };
+
     // add payed + paying in supplier ledger
     // const update_paying_column = async () => {
     //   try {
@@ -303,7 +318,7 @@ const create_payment_invoice = asyncHandler(async (req, res) => {
     //   }
     // };
 
-    await Promise.all([payment()]).catch((error) => {
+    await Promise.all([payment(), update_lp_completion()]).catch((error) => {
       throw new Error("Promise failed ", error);
     });
 
@@ -559,6 +574,51 @@ const return_lp_items_to_supplier = asyncHandler(async (req, res) => {
   }
 });
 
+const get_supplier_payment = asyncHandler(async (req, res) => {
+  try {
+    const { fromDate, toDate, supplier_id } = req?.query;
+    console.log("req?.query", req.query);
+
+    if (!fromDate || !toDate)
+      throw new ApiError(404, "Both dates are required !!!");
+    let f_date = moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss"); // 2024-12-24 00:00:00
+    let t_date = moment(toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss");
+    console.log({ f_date, t_date });
+    console.log(typeof supplier_id);
+
+    let response;
+    if (supplier_id !== "0") {
+      response = await query(
+        ` SELECT * 
+          FROM supplier_payment 
+          WHERE supplier_id = ? AND c_date BETWEEN ? AND ?`,
+        [supplier_id, f_date, t_date]
+      );
+      if (response.length === 0) throw new ApiError(404, "No Data Found !!!");
+      res.status(200).json(new ApiResponse(200, { data: response }));
+      return;
+    } else {
+      response = await query(
+        ` SELECT * 
+        FROM supplier_payment 
+        WHERE c_date BETWEEN ? AND ?`,
+        [f_date, t_date]
+      );
+      console.log("response", response);
+
+      if (response.length === 0) throw new ApiError(404, "No Data Found !!!");
+      res.status(200).json(new ApiResponse(200, { data: response }));
+      return;
+    }
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log(error);
+    throw new ApiError(500, `Internal server error !!! ${error.message}`);
+  }
+});
+
 export {
   create_supplier,
   retrieved_supplier,
@@ -569,4 +629,5 @@ export {
   payment_false_invoice,
   create_payment_invoice,
   return_lp_items_to_supplier,
+  get_supplier_payment,
 };
