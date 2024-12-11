@@ -247,38 +247,26 @@ const create_payment = asyncHandler(async (req, res) => {
 
 const create_payment_invoice = asyncHandler(async (req, res) => {
   try {
-    const {
-      supplier_id,
-      supplier_name,
-      paying,
-      payment_type,
-      remarks,
-      id,
-      invoice_no,
-    } = req.body;
+    const { supplier_id, supplier_name, paying, invoice_no } = req.body;
     console.log("req.body", req.body);
 
-    if (
-      ![supplier_id, supplier_name, paying, payment_type, id, invoice_no].every(
-        Boolean
-      )
-    )
+    if (![supplier_id, supplier_name, paying, invoice_no].every(Boolean))
       throw new ApiError(404, "All parameters are required !!!");
-    const check_valid_payment = await query(
-      `
-        SELECT (payable - payed) AS difference
-        FROM supplier_ledger
-        WHERE (payable - payed) > 0 AND id = ? AND completed = ?`,
-      [id, false]
-    );
-    if (check_valid_payment.length === 0)
-      throw new ApiError(404, "Invalid request as payment is clear already!!!");
-    if (paying > check_valid_payment[0]?.difference) {
-      throw new ApiError(
-        404,
-        "You are paying greater than pending quantity!!!"
-      );
-    }
+    // const check_valid_payment = await query(
+    //   `
+    //     SELECT (payable - payed) AS difference
+    //     FROM supplier_ledger
+    //     WHERE (payable - payed) > 0 AND id = ? AND completed = ?`,
+    //   [id, false]
+    // );
+    // if (check_valid_payment.length === 0)
+    //   throw new ApiError(404, "Invalid request as payment is clear already!!!");
+    // if (paying > check_valid_payment[0]?.difference) {
+    //   throw new ApiError(
+    //     404,
+    //     "You are paying greater than pending quantity!!!"
+    //   );
+    // }
     // create supplier payment table
     const payment = async () => {
       try {
@@ -290,9 +278,9 @@ const create_payment_invoice = asyncHandler(async (req, res) => {
             invoice_no,
             supplier_name,
             supplier_id,
-            payment_type,
+            "CASH",
             paying,
-            remarks,
+            "Against Local Purchasing",
             req?.user,
           ]
         );
@@ -303,39 +291,39 @@ const create_payment_invoice = asyncHandler(async (req, res) => {
     };
 
     // add payed + paying in supplier ledger
-    const update_paying_column = async () => {
-      try {
-        await query(
-          `UPDATE supplier_ledger SET payed = payed + ? WHERE id = ?`,
-          [paying, id]
-        );
-        return "Paying column updated !!!";
-      } catch (error) {
-        throw new Error("Paying column update failed !!!");
-      }
-    };
+    // const update_paying_column = async () => {
+    //   try {
+    //     await query(
+    //       `UPDATE supplier_ledger SET payed = payed + ? WHERE id = ?`,
+    //       [paying, id]
+    //     );
+    //     return "Paying column updated !!!";
+    //   } catch (error) {
+    //     throw new Error("Paying column update failed !!!");
+    //   }
+    // };
 
-    await Promise.all([payment(), update_paying_column()]).catch((error) => {
+    await Promise.all([payment()]).catch((error) => {
       throw new Error("Promise failed ", error);
     });
 
     // check if payed payment === paying  set completed to true
-    const check_complete_payment = await query(
-      `SELECT * from supplier_ledger WHERE payable = payed AND id = ?`,
-      [id]
-    );
-    if (check_complete_payment.length > 0) {
-      await query(`UPDATE supplier_ledger SET completed = true WHERE id = ?`, [
-        id,
-      ]);
-      res.status(200).json(new ApiResponse(200, "Payment completed !!!"));
-      return;
-    } else {
-      res
-        .status(200)
-        .json(new ApiResponse(200, "Response without payment complete"));
-      return;
-    }
+    // const check_complete_payment = await query(
+    //   `SELECT * from supplier_ledger WHERE payable = payed AND id = ?`,
+    //   [id]
+    // );
+    // if (check_complete_payment.length > 0) {
+    //   await query(`UPDATE supplier_ledger SET completed = true WHERE id = ?`, [
+    //     id,
+    //   ]);
+    res.status(200).json(new ApiResponse(200, "Payment completed !!!"));
+    return;
+    // } else {
+    //   res
+    //     .status(200)
+    //     .json(new ApiResponse(200, "Response without payment complete"));
+    //   return;
+    // }
   } catch (error) {
     if (error instanceof ApiError) {
       console.log(error);
