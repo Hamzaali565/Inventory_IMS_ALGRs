@@ -32,7 +32,8 @@ p_size_status BOOLEAN DEFAULT FALSE,
 p_size_qty DECIMAL(30, 2),
 po_no INT NOT NULL,
 grn_completed BOOLEAN DEFAULT FALSE,
-batch_no VARCHAR(300) NOT NULL
+batch_no VARCHAR(300) NOT NULL,
+b_qty DECIMAL(30, 2) DEFAULT 0
 ) 
 `;
 

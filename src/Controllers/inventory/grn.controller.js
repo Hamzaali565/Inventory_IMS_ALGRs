@@ -331,19 +331,22 @@ const direct_grn = asyncHandler(async (req, res) => {
     } = req.body;
 
     let data = grnDetails;
+    console.log("data1", data);
 
     data = data.map((items) => {
-      if (items?.p_size_stock === 0) {
-        return {
-          ...items,
-          p_size_stock: +(items?.batch_qty + items?.b_qty),
-          r_qty: Number(items?.r_qty + items?.b_qty),
-          t_qty: Number(items?.r_qty + items?.b_qty),
-        };
-      }
-      return items;
+      return {
+        ...items,
+        p_size_stock:
+          items?.p_size_status === 0
+            ? +(items?.batch_qty + items?.b_qty)
+            : items?.b_qty !== 0
+            ? (items?.r_qty + items?.b_qty) * items?.p_size_qty
+            : items?.p_size_stock,
+        batch_qty: items?.r_qty + items?.b_qty,
+      };
+      // return items;
     });
-    console.log("data", data);
+    console.log("data2", data);
 
     if (!grn_date) throw new ApiError(400, "All parameters are required !!!");
 
@@ -425,9 +428,10 @@ const direct_grn = asyncHandler(async (req, res) => {
       0,
       items?.batch_no,
       1,
+      items?.b_qty,
     ]);
     const placeholders = Array(dataRes.length)
-      .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .fill("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
       .join(", ");
 
     // get po_child of grn_status false an push in authentic_po
@@ -436,7 +440,7 @@ const direct_grn = asyncHandler(async (req, res) => {
       try {
         await query(
           `INSERT INTO grn (grn_no, item_id, item_name, unit_id, item_unit, t_qty,
-          r_qty, p_qty, charges, amount, p_size_status, p_size_qty, po_no, batch_no, grn_status) 
+          r_qty, p_qty, charges, amount, p_size_status, p_size_qty, po_no, batch_no, grn_completed, b_qty) 
           VALUES ${placeholders}`,
           values
         );
@@ -451,7 +455,7 @@ const direct_grn = asyncHandler(async (req, res) => {
       items.item_id,
       items.batch_qty,
       items.batch_no,
-      "Direct Good Recipt Note",
+      "Direct Good Receipt Note",
       req.user,
       items.location,
       items.location_id,
@@ -483,17 +487,17 @@ const direct_grn = asyncHandler(async (req, res) => {
     });
 
     const createSupplierLedger = async () => {
-      const find_last_grn = await query(
-        `SELECT * FROM grn 
-         WHERE grn_no = ?)`,
-        [grn_no]
-      );
+      const find_last_grn = await query(`SELECT * FROM grn WHERE grn_no = ?`, [
+        grn_no,
+      ]);
+      console.log("current grn", find_last_grn);
 
       const payable = find_last_grn.reduce(
         (sum, item) => sum + (item?.amount || 0),
         0
       );
 
+      console.log("payable", payable);
       await query(
         `INSERT INTO supplier_ledger (grn_no, supplier_name, supplier_id, payable, c_user) VALUES (?, ?, ?, ?, ?)`,
         [grn_no, supplier_name, supplier_id, payable, req.user]
@@ -501,11 +505,12 @@ const direct_grn = asyncHandler(async (req, res) => {
       return "Supplier Ledger Created";
     };
 
-    await Promise.all([grn_child(), update_stock(), createSupplierLedger()])
+    await Promise.all([grn_child, update_stock, createSupplierLedger()])
       .then(() => {
         res.status(200).json(new ApiResponse(200, "Direct grn created !!!"));
       })
       .catch((error) => {
+        console.log(error);
         throw new Error("Promise Failed");
       });
   } catch (error) {
