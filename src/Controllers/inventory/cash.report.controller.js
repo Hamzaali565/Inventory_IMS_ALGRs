@@ -6,9 +6,7 @@ import moment from "moment";
 
 const cashReport = asyncHandler(async (req, res) => {
   try {
-    const { fromDate, toDate, supplier_id } = req?.query;
-    console.log("req?.query", req.query);
-
+    const { fromDate, toDate } = req?.query;
     if (!fromDate || !toDate)
       throw new ApiError(404, "Both dates are required !!!");
     let f_date = moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss"); // 2024-12-24 00:00:00
