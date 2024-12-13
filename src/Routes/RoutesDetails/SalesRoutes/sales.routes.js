@@ -12,6 +12,7 @@ import {
   previous_record,
   stock_recieve_against_refund,
 } from "../../../Controllers/sales/saleOrder.controller.js";
+import { cashReport } from "../../../Controllers/inventory/cash.report.controller.js";
 
 const router = Router();
 
@@ -28,5 +29,6 @@ router.route("/create_supp_ledger_of_lp").post(create_supp_ledger_of_lp);
 router
   .route("/stock_recieve_against_refund")
   .post(stock_recieve_against_refund);
+router.route("/cash-report").get(cashReport);
 
 export default router;
