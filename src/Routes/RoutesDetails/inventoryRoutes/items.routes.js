@@ -27,6 +27,7 @@ import {
   stock_upload,
 } from "../../../Controllers/inventory/StockTaking.controller.js";
 import {
+  all_grn,
   create_grn,
   direct_grn,
 } from "../../../Controllers/inventory/grn.controller.js";
@@ -62,5 +63,6 @@ router.route("/p-stock").get(previous_stock);
 // grn
 router.route("/grn").post(create_grn);
 router.route("/direct-grn").post(direct_grn);
+router.route("/all-grn").get(all_grn);
 
 export default router;

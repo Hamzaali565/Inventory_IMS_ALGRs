@@ -584,7 +584,6 @@ const get_supplier_payment = asyncHandler(async (req, res) => {
     let f_date = moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss"); // 2024-12-24 00:00:00
     let t_date = moment(toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss");
     console.log({ f_date, t_date });
-    console.log(typeof supplier_id);
 
     let response;
     if (supplier_id !== "0") {
