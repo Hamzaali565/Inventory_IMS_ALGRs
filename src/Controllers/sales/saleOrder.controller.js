@@ -777,6 +777,31 @@ const create_expense = asyncHandler(async (req, res) => {
   }
 });
 
+const get_all_expenses = asyncHandler(async (req, res) => {
+  try {
+    const { fromDate, toDate } = req?.query;
+    console.log("req?.query", req.query);
+
+    if (!fromDate || !toDate)
+      throw new ApiError(404, "Both dates are required !!!");
+    let f_date = moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss"); // 2024-12-24 00:00:00
+    let t_date = moment(toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss");
+    const response = await query(
+      `SELECT * FROM other_expense WHERE c_date BETWEEN ? AND ?`,
+      [f_date, t_date]
+    );
+    if (response.length === 0) throw new ApiError(404, "Data not found !!!");
+    res.status(200).json(new ApiResponse(200, { data: response }));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    console.log("error ", error);
+
+    throw new ApiError(500, "Internal server error !!!");
+  }
+});
+
 export {
   get_item_to_sale,
   create_sale_order,
@@ -790,4 +815,5 @@ export {
   customers_name,
   previous_record,
   create_expense,
+  get_all_expenses,
 };

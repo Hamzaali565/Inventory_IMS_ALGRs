@@ -7,6 +7,7 @@ import {
   credit_customers,
   credit_for_clearance,
   customers_name,
+  get_all_expenses,
   get_item_to_sale,
   get_lp_detail,
   get_lp_invoices,
@@ -30,7 +31,8 @@ router.route("/create_supp_ledger_of_lp").post(create_supp_ledger_of_lp);
 router
   .route("/stock_recieve_against_refund")
   .post(stock_recieve_against_refund);
-router.route("/cash-report").get(cashReport);
 router.route("/expense").post(create_expense);
+router.route("/cash-report").get(cashReport);
+router.route("/all-expense").get(get_all_expenses);
 
 export default router;

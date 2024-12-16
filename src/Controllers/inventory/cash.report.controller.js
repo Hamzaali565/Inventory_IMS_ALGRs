@@ -65,11 +65,25 @@ const cashReport = asyncHandler(async (req, res) => {
       }
     });
 
+    const total_expense = new Promise(async (resolve, reject) => {
+      const payment = await query(
+        `SELECT IFNULL(SUM(amount), 0) as other_expense FROM other_expense WHERE c_date BETWEEN ? AND ?`,
+        [f_date, t_date]
+      );
+      if (payment) {
+        resolve(payment[0]);
+        return;
+      } else {
+        reject("Failed to retreive data total payment to supplier !!!");
+      }
+    });
+
     await Promise.all([
       total_purchasing,
       total_sale,
       total_refund,
       total_payment_to_supplier,
+      total_expense,
     ])
       .then((data) =>
         res.status(200).json(new ApiResponse(200, { data: data }))
