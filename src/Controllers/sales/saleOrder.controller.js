@@ -759,6 +759,24 @@ const previous_record = asyncHandler(async (req, res) => {
   }
 });
 
+const create_expense = asyncHandler(async (req, res) => {
+  try {
+    const { expenseType, remarks, amount } = req.body;
+    if (![expenseType, remarks, amount].every(Boolean))
+      throw new ApiError(404, "All parameters are required !!!");
+    await query(
+      `INSERT INTO other_expense ( expenseType, remarks, amount, c_user) VALUES(?, ?, ?, ?)`,
+      [expenseType, remarks, amount, req.user]
+    );
+    res.status(200).json(new ApiResponse(200, "Expense created successfully"));
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(500, "Internal server error !!!");
+  }
+});
+
 export {
   get_item_to_sale,
   create_sale_order,
@@ -771,4 +789,5 @@ export {
   stock_recieve_against_refund,
   customers_name,
   previous_record,
+  create_expense,
 };

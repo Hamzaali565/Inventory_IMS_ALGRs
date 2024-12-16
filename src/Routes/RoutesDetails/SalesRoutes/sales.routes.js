@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   create_clearance,
+  create_expense,
   create_sale_order,
   create_supp_ledger_of_lp,
   credit_customers,
@@ -30,5 +31,6 @@ router
   .route("/stock_recieve_against_refund")
   .post(stock_recieve_against_refund);
 router.route("/cash-report").get(cashReport);
+router.route("/expense").post(create_expense);
 
 export default router;
